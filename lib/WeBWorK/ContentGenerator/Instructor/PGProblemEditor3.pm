@@ -124,6 +124,7 @@ use Fcntl;
 # save_to_new_file
 # 
 
+#hiding add_problem option to see if its needed
 use constant ACTION_FORMS => [qw(view  save save_as add_problem revert)]; 
 use constant ACTION_FORM_TITLES => {   # for use with tabber it is important that the titles have no spaces
 view        => "View",
@@ -389,13 +390,13 @@ sub initialize  {
 	} elsif ((not -w $inputFilePath) && $file_type ne 'blank_problem' ) {
 
 		$self->addbadmessage("The file '".$self->shortPath($inputFilePath)."' is protected! ".CGI::br().
-		"To edit this text you must first make a copy of this file using the 'Save as' action below.");
+		"To edit this text you must first make a copy of this file using the 'NewVersion' action below.");
 
 	}
     if ($inputFilePath =~/$BLANKPROBLEM$/ && $file_type ne 'blank_problem') {
 #    	$self->addbadmessage("This file '$inputFilePath' is a blank problem! ".CGI::br()."To edit this text you must  
     	$self->addbadmessage("The file '".$self->shortPath($inputFilePath)."' is a blank problem! ".CGI::br()."To edit this text you must  
-                           use the 'Save AS' action below to save it to another file.");
+                           use the 'NewVersion' action below to save it to another file.");
     }
 	
 }
@@ -622,7 +623,7 @@ sub body {
 	}
 	my $target = 'WW_View'; #"problem$edit_level"; # increasing edit_level gives you a new window with each edit.
 	my $site_url = $ce->{webworkURLs}->{htdocs};
-	print qq!<script type="text/javascript" src="$site_url/js/wz_tooltip.js"></script>!;
+	print qq!<script type="text/javascript" src="$site_url/js/legacy/vendor/wz_tooltip.js"></script>!;
 	print CGI::script(<<EOF);
  		function setTarget(inWindow) {
 		  document.getElementById("newWindow").checked = inWindow;
@@ -630,7 +631,18 @@ sub body {
 		}
 		function updateTarget() {
 		  var inWindow = document.getElementById("newWindow").checked;
-		  document.getElementById("editor").target = (inWindow? "WW_View": "pg_editor_frame");
+		  var target = "pg_editor_frame";
+		  if (inWindow) {
+		      target = "WW_View";
+		  } 
+		  else if ((document.getElementById('save_as_form_id') &&
+			   document.getElementById('save_as_form_id').checked)
+		      || (document.getElementById('revert_form_id') && 
+			  document.getElementById('revert_form_id').checked ))
+		  {
+		      target = "";
+		  }
+		  document.getElementById("editor").target = (target);
 		}
 		function setRadio(i,nw) {
 		  document.getElementById('action'+i).checked = true;
@@ -670,7 +682,9 @@ EOF
 # 		),
 		CGI::p(
 			CGI::textarea(
-				-name => 'problemContents', -default => $problemContents,
+				-name => 'problemContents', 
+			        -class => 'latexentryfield',
+			        -default => $problemContents,
 				-rows => $rows, -cols => $columns, -override => 1,
 			),
 		);
@@ -728,7 +742,7 @@ EOF
 				# Check permissions
 				#next if FORM_PERMS()->{$actionID} and not $authz->hasPermissions($user, FORM_PERMS()->{$actionID});
 				my $actionForm = "${actionID}_form";
-				my $newWindow = ($actionID =~ m/^(view|add_problem|save)$/)? 1: 0;
+				my $newWindow = 0;
 				my $onChange = "setRadio($i,$newWindow)";
 				my %actionParams = $self->getActionParams($actionID);
 				my $line_contents = $self->$actionForm($onChange, %actionParams);
@@ -996,7 +1010,7 @@ sub getFilePaths {
 		($file_type eq 'blank_problem') and do {
 			$editFilePath = $ce->{webworkFiles}->{screenSnippets}->{blankProblem};
 			$self->addbadmessage("This is a blank problem template file and can not be edited directly. "
-			                     ."Use the 'Save as' action below to create a local copy of the file and add it to the current problem set."
+			                     ."Use the 'NewVersion' action below to create a local copy of the file and add it to the current problem set."
 			);
 			last CASE;
 		};
@@ -1205,8 +1219,8 @@ sub saveFileChanges {
     my $auxiliaryFilesExist = has_aux_files($outputFilePath);
 
     if ($auxiliaryFilesExist and not $do_not_save ) {
-        my $sourceDirectory = $sourceFilePath;
-    	my $outputDirectory = $outputFilePath;
+        my $sourceDirectory = $sourceFilePath ||'' ;
+    	my $outputDirectory = $outputFilePath ||'';
         $sourceDirectory =~ s|/[^/]+\.pg$||;
         $outputDirectory =~ s|/[^/]+\.pg$||;
 ##############
@@ -1225,8 +1239,6 @@ sub saveFileChanges {
 				#warn "files are different ",system("diff $fromPath $toPath");
         	}
         	$self->addbadmessage($writeFileErrors) if not_blank($writeFileErrors);
-        	
-
         }
         $self->addgoodmessage("Copied auxiliary files from $sourceDirectory to  new location at $outputDirectory");
  
@@ -1472,7 +1484,7 @@ sub add_problem_form {
 
 sub add_problem_handler {
 	my ($self, $genericParams, $actionParams, $tableParams) = @_;
-	my $r= $self->r;
+	my $r=$self->r;
 	#$self->addgoodmessage("add_problem_handler called");
 	my $courseName      =  $self->{courseID};
 	my $setName         =  $self->{setID};
@@ -1506,9 +1518,9 @@ sub add_problem_handler {
 		$self->{file_type}   = 'problem'; # change file type to problem -- if it's not already that
 
 		#################################################
-		# Set up redirect Problem.pm
+		# Set up redirect to problem editor page. 
 		#################################################
-		my $problemPage = $self->r->urlpath->newFromModule("WeBWorK::ContentGenerator::Problem",$r,
+		my $problemPage = $self->r->urlpath->newFromModule("WeBWorK::ContentGenerator::Instructor::PGProblemEditor3",$r,
 			courseID  => $courseName, 
 			setID     => $targetSetName, 
 			problemID => $targetProblemNumber, 
@@ -1521,6 +1533,7 @@ sub add_problem_handler {
 					editMode           => "savedFile",
 					edit_level         => $edit_level,
 					sourceFilePath     => $relativeSourceFilePath,
+					file_type          => 'problem',
 					status_message     => uri_escape($self->{status_message})
 	
 				}
@@ -1550,6 +1563,32 @@ sub add_problem_handler {
 					edit_level         => $edit_level,
 					status_message     => uri_escape($self->{status_message})
 				}
+		);
+	} elsif ($targetFileType eq 'hardcopy_header')  {
+		#################################################
+		# Update set record
+		#################################################
+		my $setRecord  = $self->r->db->getGlobalSet($targetSetName);
+		$setRecord->hardcopy_header($sourceFilePath);
+		if(  $self->r->db->putGlobalSet($setRecord) ) {
+			$self->addgoodmessage("Added '".$self->shortPath($sourceFilePath)."' to ". $targetSetName. " as new hardcopy header ") ;
+		} else {
+			$self->addbadmessage("Unable to make '".$self->shortPath($sourceFilePath)."' the hardcopy header for $targetSetName");
+		}
+		$self->{file_type} = 'hardcopy_header'; # change file type to set_header if it not already so
+		#################################################
+		# Set up redirect
+		#################################################
+		my $problemPage = $self->r->urlpath->newFromModule("WeBWorK::ContentGenerator::Hardcopy",$r,
+			courseID => $courseName, setID => $targetSetName
+		);
+		$viewURL = $self->systemLink($problemPage,
+				params => {
+					displayMode        => $displayMode,
+					editMode           => "savedFile",
+					edit_level         => $edit_level,
+					status_message     => uri_escape($self->{status_message}),
+						}
 		);
 	} else {
 		die "Don't know what to do with target file type $targetFileType";
@@ -1803,6 +1842,7 @@ sub save_as_form {  # calls the save_as_handler
     			 # -label     => '',
     			 # -onfocus   => $onChange,
     		 # },"and append to end of set $fullSetID",) : ''
+
 			 WeBWorK::CGI_labeled_input(-type=>'radio', -id=>"action_save_as_saveMode_new_problem_id", -label_text=>"Append to end of ". CGI::strong("$fullSetID")." set", -input_attr=>{
 				 -name      => "action.save_as.saveMode",
     			 -value     => 'add_to_set_as_new_problem',
@@ -1890,11 +1930,11 @@ sub save_as_handler {
 	if (defined $outputFilePath and -e $outputFilePath) {
 		# setting $do_not_save stops saving and any redirects
 		$do_not_save = 1;
-		$self->addbadmessage(CGI::p("File '".$self->shortPath($outputFilePath)."' exists.  
+		$self->addbadmessage("File '".$self->shortPath($outputFilePath)."' exists.  
 		File not saved. No changes have been made.
-		You can change the file path for this problem manually from the 'Hmwk Sets Editor' page"));
-		$self->addgoodmessage(CGI::p("The text box now contains the source of the original problem.".
-		" You can recover lost edits by using the Back button on your browser."));
+		You can change the file path for this problem manually from the 'Hmwk Sets Editor' page");
+		$self->addgoodmessage("The text box now contains the source of the original problem.".
+		" You can recover lost edits by using the Back button on your browser.");
 	} else {
 		$self->{editFilePath} = $outputFilePath;
 		$self->{tempFilePath} = ''; # nothing needs to be unlinked.
@@ -1986,8 +2026,9 @@ sub save_as_handler {
 		);
 		$new_file_type = $file_type;
 	} elsif ($saveMode eq 'add_to_set_as_new_problem') {
+	    my $targetProblemNumber   =  WeBWorK::Utils::max( $self->r->db->listGlobalProblems($setName));
 	    $problemPage = $self->r->urlpath->newFromModule("WeBWorK::ContentGenerator::Instructor::PGProblemEditor3",$r,
-			courseID => $courseName, setID => $setName, problemID => $problemNumber
+			courseID => $courseName, setID => $setName, problemID => $targetProblemNumber
 		);
 		$new_file_type = $file_type;
 	} else {
@@ -2045,13 +2086,24 @@ sub output_JS{
 	my $ce = $r->ce;
 
 	my $site_url = $ce->{webworkURLs}->{htdocs};
-#	print CGI::start_script({type=>"text/javascript", src=>"$site_url/js/jquery-1.7.1.min.js"}), CGI::end_script();
-	print CGI::start_script({type=>"text/javascript", src=>"$site_url/js/addOnLoadEvent.js"}), CGI::end_script();
-	print CGI::start_script({type=>"text/javascript", src=>"$site_url/js/tabber.js"}), CGI::end_script();
-	print CGI::start_script({type=>"text/javascript", src=>"$site_url/js/pg_editor_handlers.js"}), CGI::end_script();
+#	print CGI::start_script({type=>"text/javascript", src=>"$site_url/js/vendor/jquery/jquery.js"}), CGI::end_script();
+#	print CGI::start_script({type=>"text/javascript", src=>"$site_url/js/vendor/bootstrap/js/bootstrap.js"}), CGI::end_script();
+	print CGI::start_script({type=>"text/javascript", src=>"$site_url/js/legacy/addOnLoadEvent.js"}), CGI::end_script();
+	print CGI::start_script({type=>"text/javascript", src=>"$site_url/js/legacy/vendor/tabber.js"}), CGI::end_script();
 	print CGI::start_script({type=>"text/javascript", src=>"$site_url/js/apps/PGProblemEditor3/pgproblemeditor3.js"}), CGI::end_script();
 
+	if ($ce->{options}->{PGMathView}) {
+	    print CGI::start_script({type=>"text/javascript", src=>"$ce->{webworkURLs}->{MathJax}"}), CGI::end_script();
+	    print "<link href=\"$site_url/js/apps/MathView/mathview.css\" rel=\"stylesheet\" />";
+	    print CGI::start_script({type=>"text/javascript", src=>"$site_url/js/apps/MathView/$ce->{pg}->{options}->{mathViewLocale}"}), CGI::end_script();
+	    print CGI::start_script({type=>"text/javascript", src=>"$site_url/js/apps/MathView/mathview.js"}), CGI::end_script();
+	}
 	
+	return "";
+}
+
+#Tells template to output stylesheet and js for Jquery-UI
+sub output_jquery_ui{
 	return "";
 }
 

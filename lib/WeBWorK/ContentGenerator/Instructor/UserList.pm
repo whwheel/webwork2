@@ -174,7 +174,16 @@ use constant  FIELD_PROPERTIES => {
 #		type => "number",
 #		size => 2,
 #		access => "readwrite",
-	}
+	},
+	displayMode => {
+	    access => 'hidden',
+	},
+	showOldAnswers => {
+	    access => 'hidden',
+	},
+	useMathView => {
+	    access => 'hidden',
+	},
 };
 sub pre_header_initialize {
 	my $self          = shift;
@@ -563,7 +572,7 @@ sub body {
 	if ($editMode) {
 	   
 
-		print CGI::p('<b>Click</b> on the login name to <b>edit individual problem set data</b>, (e.g. due dates) for these students.');
+		print CGI::p($r->maketext('Click on the login name to edit individual problem set data, (e.g. due dates) for these students.'));
 	}
 	$self->printTableHTML(\@Users, \@PermissionLevels, \%prettyFieldNames,
 		editMode => $editMode,
@@ -623,8 +632,18 @@ sub filter_form {
 	my $r = $self->r;
 	#return CGI::table({}, CGI::Tr({-valign=>"top"},
 	#	CGI::td({}, 
-	
+
 	my %prettyFieldNames = %{ $self->{prettyFieldNames} };
+	my %fieldProperties = %{ FIELD_PROPERTIES() };	
+
+	my @fields;
+	
+	foreach my $field (keys %fieldProperties) {
+	    push @fields, $field unless
+		$fieldProperties{$field}{access} eq 'hidden';
+	}
+
+	@fields = sort {$prettyFieldNames{$a} cmp $prettyFieldNames{$b}} @fields;
 	
 	return join("", 
 			$r->maketext("Show")." ",
@@ -671,7 +690,7 @@ sub filter_form {
 			" ".$r->maketext("in their")." ",
 			CGI::popup_menu(
 				-name => "action.filter.field",
-				-value => [ keys %{ FIELD_PROPERTIES() } ],
+				-value => \@fields,
 				-default => $actionParams{"action.filter.field"}->[0] || "user_id",
 				-labels => \%prettyFieldNames,
 				-onchange => $onChange,
@@ -1137,7 +1156,7 @@ sub export_handler {
 
 sub cancelEdit_form {
 	my ($self, $onChange, %actionParams) = @_;
-	return "Abandon changes";
+	return $self->r->maketext("Abandon changes");
 }
 
 sub cancelEdit_handler {
@@ -1160,7 +1179,7 @@ sub cancelEdit_handler {
 
 sub saveEdit_form {
 	my ($self, $onChange, %actionParams) = @_;
-	return "Save changes";
+	return $self->r->maketext("Save changes");
 }
 
 sub saveEdit_handler {
@@ -1230,7 +1249,7 @@ sub cancelPassword_handler {
 
 sub savePassword_form {
 	my ($self, $onChange, %actionParams) = @_;
-	return "Save changes";
+	return $self->r->maketext("Save changes");
 }
 
 sub savePassword_handler {
@@ -1649,6 +1668,7 @@ sub recordEditHTML {
 		my $fieldName = 'user.' . $User->user_id . '.' . $field,
 		my $fieldValue = $User->$field;
 		my %properties = %{ FIELD_PROPERTIES()->{$field} };
+		next if $properties{access} eq 'hidden';
 		$properties{access} = 'readonly' unless $editMode;
 		$properties{type} = 'email' if ($field eq 'email_address' and !$editMode and !$passwordMode);
 		$fieldValue = $self->nbsp($fieldValue) unless $editMode;
@@ -1703,8 +1723,10 @@ sub printTableHTML {
 	#my $hrefPrefix = $r->uri . "?" . $self->url_args(@stateParams); # $self->url_authen_args
 	my @tableHeadings;
 	foreach my $field (@realFieldNames) {
-		my $result = $fieldNames{$field};
-		push @tableHeadings, $result;
+	    my %properties = %{ FIELD_PROPERTIES()->{$field} };
+	    next if $properties{access} eq 'hidden';
+	    my $result = $fieldNames{$field};
+	    push @tableHeadings, $result;
 	};
 	
 	# prepend selection checkbox? only if we're NOT editing!

@@ -79,17 +79,19 @@ sub initialize {
 				$userAchievement->earned($updatedEarned);
 				my $globalUserAchievement = $db->getGlobalUserAchievement($selectedUser);
 				my $achievement = $db->getAchievement($achievementID);
+
+				my $points = $achievement->points || 0;
+				my $initialpoints = $globalUserAchievement->achievement_points || 0;
 				#add the correct number of points if we 
 				# are saying that the user now earned the
 				# achievement, or remove them otherwise
 				if ($updatedEarned) {
+
 				    $globalUserAchievement->achievement_points(
-					$globalUserAchievement->achievement_points +
-					$achievement->points);
+					$initialpoints +	$points);
 				} else {
 				    $globalUserAchievement->achievement_points(
-					$globalUserAchievement->achievement_points -
-					$achievement->points);
+					$initialpoints -	$points);
 				}
 
 				$db->putGlobalUserAchievement($globalUserAchievement);
@@ -144,10 +146,10 @@ sub body {
 	 
 	# Assign to everyone message
 	print CGI::p(
-		    CGI::submit({name=>"assignToAll", value => "Assign to All Current Users"}), CGI::i("This action will not overwrite existing users.")
+		    CGI::submit({name=>"assignToAll", value => $r->maketext("Assign to All Current Users")}), CGI::i($r->maketext("This action will not overwrite existing users."))
 		  ),
-		  CGI::div({-style=>"color:red"}, "Do not uncheck students, unless you know what you are doing.",CGI::br(),
-	           "There is NO undo for unassigning students. "),
+		  CGI::div({-style=>"color:red"}, $r->maketext("Do not uncheck students, unless you know what you are doing."),CGI::br(),
+	           $r->maketext("There is NO undo for unassigning students.")),
 	      CGI::p("When you unassign
 				        by unchecking a student's name, you destroy all
 				        of the data for achievement ".CGI::b($achievementID)." for this student. You will then need to
@@ -188,10 +190,9 @@ sub body {
 				CGI::checkbox({
 						type=>"checkbox",
 						name=>"selected",
-						checked=>(
-							defined($userAchievement)
-							? "on" : ""
-						    ), value=>$user,
+						(defined($userAchievement) ? 
+						    ('checked',1) : ()),
+						value=>$user,
 						label=>"",
 					      })
 			      ),CGI::td({},[

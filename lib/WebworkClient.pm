@@ -135,15 +135,19 @@ sub xmlrpcCall {
 	  my $input2 = $self->setInputTable();
 	  $input = {%$input2, %$input};
 	
-	  my $requestResult; 
-	  eval {
-	  	$requestResult= TRANSPORT_METHOD
+	my $requestResult; 
+	my $transporter = TRANSPORT_METHOD->new;
+
+	eval {
+	    $requestResult= $transporter
 	        #->uri('http://'.HOSTURL.':'.HOSTPORT.'/'.REQUEST_CLASS)
-			#-> proxy(PROTOCOL.'://'.HOSTURL.':'.HOSTPORT.'/'.REQUEST_URI);
-			-> proxy(($self->url).'/'.REQUEST_URI);
-		};
-		print STDERR "WebworkClient: Initiating xmlrpc request to url ",($self->url).'/'.REQUEST_URI, " \n Error: $@\n" if $@;
-			
+		#-> proxy(PROTOCOL.'://'.HOSTURL.':'.HOSTPORT.'/'.REQUEST_URI);
+		-> proxy(($self->url).'/'.REQUEST_URI);
+	};
+	print STDERR "WebworkClient: Initiating xmlrpc request to url ",($self->url).'/'.REQUEST_URI, " \n Error: $@\n" if $@;
+	# turn of verification of the ssl cert 
+	$transporter->transport->ssl_opts(verify_hostname=>0,
+	    SSL_verify_mode => 'SSL_VERIFY_NONE');
 			
     if ($UNIT_TESTS_ON) {
         print STDERR  "WebworkClient.pm ".__LINE__." xmlrpcCall sent to ", $self->{url},"\n";
@@ -152,7 +156,6 @@ sub xmlrpcCall {
     	print STDERR  "WebworkClient.pm ".__LINE__." xmlrpcCall $command initiated webwork webservice object $requestResult\n";
     }
  		
-	
 	  local( $result);
 	  # use eval to catch errors
 	  #print STDERR "WebworkClient: issue command ", REQUEST_CLASS.'.'.$command, " ",join(" ", %$input),"\n";
@@ -192,9 +195,14 @@ sub jsXmlrpcCall {
     }
 
 	print "the command was $command";
-	  my $requestResult = TRANSPORT_METHOD
-			-> proxy(($self->url).'/'.REQUEST_URI);
-		
+
+	my $transporter = TRANSPORT_METHOD->new;
+	
+	my $requestResult = $transporter
+	    -> proxy(($self->url).'/'.REQUEST_URI);
+	$transporter->transport->ssl_opts(verify_hostname=>0,
+	     SSL_verify_mode => 'SSL_VERIFY_NONE');
+	
 	  local( $result);
 	  # use eval to catch errors
 	  eval { $result = $requestResult->call(REQUEST_CLASS.'.'.$command,$input) };

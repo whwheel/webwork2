@@ -27,13 +27,28 @@ use WeBWorK::Debug;
 #$WeBWorK::Debug::AllowSubroutineOutput = "get_credentials";
 
 sub get_credentials {
-	my ($self) = @_;
+	my $self = shift;
 	my $r = $self->{r};
 	my $ce = $r->ce;
 
+	# Disable password authentication
+	$self->{external_auth} = 1;
+
+	# This next part is necessary because some parts of webwork (e.g.,
+	# WebworkWebservice.pm) need to replace the get_credentials() routine,
+	# but only replace the one in the parent class (out of caution,
+	# presumably).  Therefore, we end up here even when authenticating
+	# for WebworkWebservice.pm.  This would cause authentication failures
+	# when authenticating javascript web service requests (e.g., the
+	# Library Browser).
+
+	if ($r->{xmlrpc}) {
+		debug("falling back to superclass get_credentials (xmlrpc call)");
+		return $self->SUPER::get_credentials(@_);
+	}
+
 	# if we come in with a user_id, then we've already authenticated
 	#    through the CAS.  So just check the provided user and session key.
-	$self->{external_auth} = 1;
 	if (defined $r->param('key') && defined $r->param('user')) {
 		# These lines were copied from the superclass get_credentials.
 		$self->{session_key} = $r->param('key');

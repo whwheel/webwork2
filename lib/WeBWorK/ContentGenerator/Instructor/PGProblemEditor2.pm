@@ -23,7 +23,7 @@ use constant DEFAULT_SEED => 123456;
 
 =head1 NAME
 
-WeBWorK::ContentGenerator::Instructor::PGProblemEditor2 - Edit a pg file
+WeBWorK::ContentGenerator::Instructor::PGProblemEditor2 - Edit a pg file#
 
 =cut
 
@@ -389,13 +389,13 @@ sub initialize  {
 	} elsif ((not -w $inputFilePath) && $file_type ne 'blank_problem' ) {
 
 		$self->addbadmessage("The file '".$self->shortPath($inputFilePath)."' is protected! ".CGI::br().
-		"To edit this text you must first make a copy of this file using the 'Save as' action below.");
+		"To edit this text you must first make a copy of this file using the 'NewVersion' action below.");
 
 	}
     if ($inputFilePath =~/$BLANKPROBLEM$/ && $file_type ne 'blank_problem') {
 #    	$self->addbadmessage("This file '$inputFilePath' is a blank problem! ".CGI::br()."To edit this text you must  
     	$self->addbadmessage("The file '".$self->shortPath($inputFilePath)."' is a blank problem! ".CGI::br()."To edit this text you must  
-                           use the 'Save AS' action below to save it to another file.");
+                           use the 'NewVersion' action below to save it to another file.");
     }
 	
 }
@@ -403,14 +403,14 @@ sub initialize  {
 sub path {
 	my ($self, $args) = @_;
 	my $r = $self->r;
-	my $urlpath = $r->urlpath;
-	my $courseName  = $urlpath->arg("courseID");
-	my $setName = $r->urlpath->arg("setID") || '';
-	my $problemNumber = $r->urlpath->arg("problemID") || '';
+	my $urlpath       = $r->urlpath;
+	my $courseName    = $urlpath->arg("courseID");
+	my $setName       = $urlpath->arg("setID") || '';
+	my $problemNumber = $urlpath->arg("problemID") || '';
 
 	# we need to build a path to the problem being edited by hand, since it is not the same as the urlpath
 	# For this page the bread crum path leads back to the problem being edited, not to the Instructor tool.
-	my @path = ( 'WeBWork', $r->location,
+	my @path = ( 'WeBWorK', $r->location,
 	          "$courseName", $r->location."/$courseName",
 	          "$setName",    $r->location."/$courseName/$setName",
 	          "$problemNumber", $r->location."/$courseName/$setName/$problemNumber",
@@ -622,20 +622,28 @@ sub body {
 	}
 	my $target = 'WW_View'; #"problem$edit_level"; # increasing edit_level gives you a new window with each edit.
 	my $site_url = $ce->{webworkURLs}->{htdocs};
-	print qq!<script type="text/javascript" src="$site_url/js/wz_tooltip.js"></script>!;
+	print qq!<script type="text/javascript" src="$site_url/js/legacy/vendor/wz_tooltip.js"></script>!;
 	print CGI::script(<<EOF);
- 		function setTarget(inWindow) {
-		  document.getElementById("newWindow").checked = inWindow;
-		  updateTarget();
+	function setTarget(inWindow) {
+	    document.getElementById("newWindow").checked = inWindow;
+	    updateTarget();
+	}
+	function updateTarget() {
+	    var inWindow = document.getElementById("newWindow").checked;
+	    if (inWindow) {
+		if (document.getElementById("save_as_form_id") && 
+		    document.getElementById("save_as_form_id").checked) {
+		    document.getElementById("editor").target = "WW_New_Edit";
+		} else {
+		    document.getElementById("editor").target = "WW_View";
 		}
-		function updateTarget() {
-		  var inWindow = document.getElementById("newWindow").checked;
-		  document.getElementById("editor").target = (inWindow? "WW_View": "");
-		}
-		function setRadio(i,nw) {
-		  document.getElementById('action'+i).checked = true;
-		  setTarget(nw);
-		}
+	    } else {
+		document.getElementById("editor").target = "";
+	    }
+	}
+	function setRadio(i,nw) {
+	    setTarget(nw);
+	}
 EOF
 	
 
@@ -670,7 +678,7 @@ EOF
 # 		),
 		CGI::p(
 			CGI::textarea(
-				-name => 'problemContents', -default => $problemContents,
+				-name => 'problemContents', -default => $problemContents, -class => 'latexentryfield',
 				-rows => $rows, -cols => $columns, -override => 1,
 			),
 		);
@@ -980,7 +988,7 @@ sub getFilePaths {
 		($file_type eq 'blank_problem') and do {
 			$editFilePath = $ce->{webworkFiles}->{screenSnippets}->{blankProblem};
 			$self->addbadmessage("This is a blank problem template file and can not be edited directly. "
-			                     ."Use the 'Save as' action below to create a local copy of the file and add it to the current problem set."
+			                     ."Use the 'NewVersion' action below to create a local copy of the file and add it to the current problem set."
 			);
 			last CASE;
 		};
@@ -1262,6 +1270,7 @@ sub getActionParams {
 sub fixProblemContents {
 		#NOT a method
 		my $problemContents = shift;
+		
 		# Handle the problem of line endings.  
 		# Make sure that all of the line endings are of unix type.  
 		# Convert \r\n to \n
@@ -1492,7 +1501,7 @@ sub add_problem_handler {
 		#################################################
 		# Set up redirect Problem.pm
 		#################################################
-		my $problemPage = $self->r->urlpath->newFromModule("WeBWorK::ContentGenerator::Problem",$r,
+				my $problemPage = $self->r->urlpath->newFromModule("WeBWorK::ContentGenerator::Instructor::PGProblemEditor2",$r,
 			courseID  => $courseName, 
 			setID     => $targetSetName, 
 			problemID => $targetProblemNumber, 
@@ -1505,10 +1514,12 @@ sub add_problem_handler {
 					editMode           => "savedFile",
 					edit_level         => $edit_level,
 					sourceFilePath     => $relativeSourceFilePath,
-					status_message     => uri_escape($self->{status_message})
+					status_message     => uri_escape($self->{status_message}),
+					file_type          => 'problem',
 	
 				}
 		);
+
 	} elsif ($targetFileType eq 'set_header')  {
 		#################################################
 		# Update set record
@@ -1532,8 +1543,34 @@ sub add_problem_handler {
 					displayMode        => $displayMode,
 					editMode           => "savedFile",
 					edit_level         => $edit_level,
-					status_message     => uri_escape($self->{status_message})
-				}
+					status_message     => uri_escape($self->{status_message}),
+						}
+		);
+	} elsif ($targetFileType eq 'hardcopy_header')  {
+		#################################################
+		# Update set record
+		#################################################
+		my $setRecord  = $self->r->db->getGlobalSet($targetSetName);
+		$setRecord->hardcopy_header($sourceFilePath);
+		if(  $self->r->db->putGlobalSet($setRecord) ) {
+			$self->addgoodmessage("Added '".$self->shortPath($sourceFilePath)."' to ". $targetSetName. " as new hardcopy header ") ;
+		} else {
+			$self->addbadmessage("Unable to make '".$self->shortPath($sourceFilePath)."' the hardcopy header for $targetSetName");
+		}
+		$self->{file_type} = 'hardcopy_header'; # change file type to set_header if it not already so
+		#################################################
+		# Set up redirect
+		#################################################
+		my $problemPage = $self->r->urlpath->newFromModule("WeBWorK::ContentGenerator::Hardcopy",$r,
+			courseID => $courseName, setID => $targetSetName
+		);
+		$viewURL = $self->systemLink($problemPage,
+				params => {
+					displayMode        => $displayMode,
+					editMode           => "savedFile",
+					edit_level         => $edit_level,
+					status_message     => uri_escape($self->{status_message}),
+						}
 		);
 	} else {
 		die "Don't know what to do with target file type $targetFileType";
@@ -1928,7 +1965,7 @@ sub save_as_handler {
 				}
 			}
 		} elsif ($saveMode eq 'add_to_set_as_new_problem') {
-			my $targetProblemNumber   =  1+ WeBWorK::Utils::max( $self->r->db->listGlobalProblems($setName));
+			my $targetProblemNumber   =  1+WeBWorK::Utils::max( $self->r->db->listGlobalProblems($setName));
 			my $problemRecord  = $self->addProblemToSet(
 					   setName        => $setName,
 					   sourceFile     => $new_file_name, 
@@ -1970,8 +2007,9 @@ sub save_as_handler {
 		);
 		$new_file_type = $file_type;
 	} elsif ($saveMode eq 'add_to_set_as_new_problem') {
+	    my $targetProblemNumber   =  WeBWorK::Utils::max( $self->r->db->listGlobalProblems($setName));
 	    $problemPage = $self->r->urlpath->newFromModule("WeBWorK::ContentGenerator::Instructor::PGProblemEditor2",$r,
-			courseID => $courseName, setID => $setName, problemID => $problemNumber
+			courseID => $courseName, setID => $setName, problemID => $targetProblemNumber
 		);
 		$new_file_type = $file_type;
 	} else {
@@ -2029,9 +2067,21 @@ sub output_JS{
 	my $ce = $r->ce;
 
 	my $site_url = $ce->{webworkURLs}->{htdocs};
-	print CGI::start_script({type=>"text/javascript", src=>"$site_url/js/addOnLoadEvent.js"}), CGI::end_script();
-	print CGI::start_script({type=>"text/javascript", src=>"$site_url/js/tabber.js"}), CGI::end_script();
-	
+	print CGI::start_script({type=>"text/javascript", src=>"$site_url/js/legacy/addOnLoadEvent.js"}), CGI::end_script();
+	print CGI::start_script({type=>"text/javascript", src=>"$site_url/js/legacy/vendor/tabber.js"}), CGI::end_script();
+
+	if ($ce->{options}->{PGMathView}) {
+	    print CGI::start_script({type=>"text/javascript", src=>"$ce->{webworkURLs}->{MathJax}"}), CGI::end_script();
+	    print "<link href=\"$site_url/js/apps/MathView/mathview.css\" rel=\"stylesheet\" />";
+	    print CGI::start_script({type=>"text/javascript", src=>"$site_url/js/apps/MathView/$ce->{pg}->{options}->{mathViewLocale}"}), CGI::end_script();
+	    print CGI::start_script({type=>"text/javascript", src=>"$site_url/js/apps/MathView/mathview.js"}), CGI::end_script();
+	}
+
+	return "";
+}
+
+#Tells template to output stylesheet and js for Jquery-UI
+sub output_jquery_ui{
 	return "";
 }
 

@@ -28,7 +28,7 @@ use warnings;
 #use CGI qw(-nosticky );
 use WeBWorK::CGI;
 use WeBWorK::Debug;
-use WeBWorK::Utils qw(readFile);
+use WeBWorK::Utils qw(readFile wwRound);
 
 our @userInfoColumnHeadings = ("STUDENT ID", "login ID", "LAST NAME", "FIRST NAME", "SECTION", "RECITATION");
 our @userInfoFields = ("student_id", "user_id","last_name", "first_name", "section", "recitation");
@@ -164,7 +164,7 @@ sub body {
 					CGI::td({},
 						CGI::checkbox({ -name=>'includeIndex',
 										-value=>1,
-										-label=>'Include Index',
+										-label=>$r->maketext('Include Success Index'),
 										-checked=>0,
 									   },
 						),
@@ -186,7 +186,7 @@ sub body {
 						#CGI::br(),
 						CGI::checkbox({ -name=>'recordSingleSetScores',
 										-value=>1,
-										-label=>'Record Scores for Single Sets',
+										-label=>$r->maketext('Record Scores for Single Sets'),
 										-checked=>0,
 									  },
 									 'Record Scores for Single Sets'
@@ -194,7 +194,7 @@ sub body {
 						CGI::br(),
 						CGI::checkbox({ -name=>'padFields',
 										-value=>1,
-										-label=>'Pad Fields',
+										-label=>$r->maketext('Pad Fields'),
 										-checked=>1,
 									  },
 									 'Pad Fields'
@@ -214,7 +214,7 @@ sub body {
 	if ($authz->hasPermissions($user, "score_sets")) {
 		my @selected = $r->param('selectedSet');
 		if (@selected) {
-			print CGI::p("All of these files will also be made available for mail merge");
+			print CGI::p($r->maketext("All of these files will also be made available for mail merge."));
 		} 
 		foreach my $setID (@selected) {
 	
@@ -236,7 +236,7 @@ sub body {
 			}
 		}
 		if (-f "$scoringDir/$scoringFileName") {
-			print CGI::h2("Totals");
+			print CGI::h2($r->maketext("Totals"));
 			#print CGI::a({href=>"../scoringDownload/?getFile=${courseName}_totals.csv&".$self->url_authen_args}, "${courseName}_totals.csv");
 			print CGI::a({href=>$self->systemLink($scoringDownloadPage,
 					               params=>{getFile => "$scoringFileName" } )}, "$scoringFileName");
@@ -526,7 +526,7 @@ sub scoreSet {
 		}
 		for (my $user = 0; $user < @sortedUserIDs; $user++) {
             $userStatusTotals{$user} =$userStatusTotals{$user} ||0;
-			$scoringData[7+$user][$totalsColumn] = sprintf("%.1f",$userStatusTotals{$user}) if $scoringItems->{setTotals};
+			$scoringData[7+$user][$totalsColumn] = wwRound(2,$userStatusTotals{$user}) if $scoringItems->{setTotals};
 			$scoringData[7+$user][$totalsColumn+1] = sprintf("%.0f",100*$userSuccessIndex{$user}) if $scoringItems->{successIndex};
 
 		}
@@ -565,8 +565,8 @@ sub sumScores {    # Create a totals column for each student
 			$studentTotal += ($score =~/^\s*[\d\.]+\s*$/)? $score : 0;
 			
 		}
-		$scoringData[$i][0] =sprintf("%.1f",$studentTotal);
-		$scoringData[$i][1] =($totalPoints) ?sprintf("%.1f",100*$studentTotal/$totalPoints) : 0;
+		$scoringData[$i][0] = wwRound(2,$studentTotal);
+		$scoringData[$i][1] = ($totalPoints) ?wwRound(2,100*$studentTotal/$totalPoints) : 0;
     }
     $scoringData[0]      = ['',''];
     $scoringData[1]      = ['summary', '%score'];

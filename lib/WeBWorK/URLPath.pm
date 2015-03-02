@@ -73,10 +73,6 @@ PLEASE FOR THE LOVE OF GOD UPDATE THIS IF YOU CHANGE THE HEIRARCHY BELOW!!!
  instructor_user_list2                /$courseID/instructor/users2/
  instructor_user_detail2              /$courseID/instructor/users2/$userID/ #not created yet
  instructor_sets_assigned_to_user2    /$courseID/instructor/users2/$userID/sets/ #not created yet
-
- instructor_user_list3                /$courseID/instructor/users3/
- instructor_user_detail3              /$courseID/instructor/users3/$userID/ #not created yet
- instructor_sets_assigned_to_user3    /$courseID/instructor/users3/$userID/sets/ #not created yet
  
  instructor_set_list                 /$courseID/instructor/sets/
  instructor_set_detail               /$courseID/instructor/sets/$setID/
@@ -86,7 +82,9 @@ PLEASE FOR THE LOVE OF GOD UPDATE THIS IF YOU CHANGE THE HEIRARCHY BELOW!!!
  instructor_set_detail2               /$courseID/instructor/sets2/$setID/ #not created yet
  instructor_users_assigned_to_set2    /$courseID/instructor/sets2/$setID/users/ #not created yet
 
- instructor_problem_grader           /$courseID/instructor/grader/$setID/$problemID
+
+ instructor_problem_grader                /$courseID/instructor/grader/$setID/$problemID
+
  
  instructor_add_users                /$courseID/instructor/add_users/
  instructor_set_assigner             /$courseID/instructor/assigner/
@@ -111,11 +109,11 @@ PLEASE FOR THE LOVE OF GOD UPDATE THIS IF YOU CHANGE THE HEIRARCHY BELOW!!!
  instructor_problem_editor2_withset_withproblem
                                      /$courseID/instructor/pgProblemEditor2/$setID/$problemID/
  
-  instructor_problem_editor3           /$courseID/instructor/pgProblemEditor3/
+ instructor_problem_editor3           /$courseID/instructor/pgProblemEditor3/
  instructor_problem_editor3_withset   /$courseID/instructor/pgProblemEditor3/$setID/
- instructor_problem_editor3_withset_withproblem
-                                     /$courseID/instructor/pgProblemEditor3/$setID/$problemID/
+ instructor_problem_editor3_withset_withproblem /$courseID/instructor/pgProblemEditor3/$setID/$problemID/
  
+
  instructor_scoring                  /$courseID/instructor/scoring/
  instructor_scoring_download         /$courseID/instructor/scoringDownload/
  instructor_mail_merge               /$courseID/instructor/send_mail/
@@ -138,7 +136,7 @@ PLEASE FOR THE LOVE OF GOD UPDATE THIS IF YOU CHANGE THE HEIRARCHY BELOW!!!
  problem_detail                      /$courseID/$setID/$problemID/
 answer_log                           /$courseID/show_answers/
  achievements                        /$courseID/achievements
- instructor_achievement_list         /$courseID//instructor/achievement_list
+ instructor_achievement_list         /$courseID/instructor/achievement_list
  instructor_achievement_editor       /$courseID/instructor/achievement_list/$achievementID/editor
  instructor_achievement_user_editor  /$courseID/instructor/achievement_list/$achievementID/users
 
@@ -255,7 +253,7 @@ our %pathTypes = (
 		match   => qr|^proctored_quiz_mode/([^/]+)/|,
 		capture => [ qw/setID/ ],
 		produce => 'proctored_quiz_mode/$setID/',
-		display => 'WeBWorK::ContentGenerator::GatewayQuiz',
+		display => 'WeBWorK::ContentGenerator::ProctoredGatewayQuiz',
 	},
 	proctored_gateway_proctor_login => {
 		name    => 'Proctored Gateway Quiz $setID Proctor Login',
@@ -312,7 +310,7 @@ our %pathTypes = (
 		display => 'WeBWorK::ContentGenerator::Logout',
 	},
 	options => {
-		name    => 'Password/Email',
+		name    => 'User Settings',
 		parent  => 'set_list',
 		kids    => [ qw// ],
 		match   => qr|^options/|,
@@ -344,11 +342,11 @@ our %pathTypes = (
 	instructor_tools => {
 		name    => 'Instructor Tools',
 		parent  => 'set_list',
-		kids    => [ qw/instructor_user_list instructor_user_list2 instructor_user_list3 instructor_set_list instructor_set_list2
+		kids    => [ qw/instructor_user_list instructor_user_list2 instructor_set_list instructor_set_list2
 		    instructor_add_users instructor_achievement_list 
 			instructor_set_assigner instructor_file_manager
 			instructor_problem_editor instructor_problem_editor2 instructor_problem_editor3
-			instructor_set_maker instructor_set_maker_no_js instructor_set_maker2 instructor_set_maker3 
+			instructor_set_maker instructor_set_maker2 instructor_set_maker3 instructor_set_maker_no_js
 			instructor_get_target_set_problems instructor_get_library_set_problems instructor_compare
 			instructor_config
 			instructor_scoring instructor_scoring_download instructor_mail_merge
@@ -365,7 +363,7 @@ our %pathTypes = (
 	################################################################################
 	
 	instructor_user_list => {
-		name    => 'Classlist Editor',
+		name    => 'Old Classlist Editor',
 		parent  => 'instructor_tools',
 		kids    => [ qw/instructor_user_detail/ ],
 		match   => qr|^users/|,
@@ -374,7 +372,7 @@ our %pathTypes = (
 		display => 'WeBWorK::ContentGenerator::Instructor::UserList',
 	},
 	instructor_user_list2 => {
-		name    => 'Classlist Editor2',
+		name    => 'Classlist Editor',
 		parent  => 'instructor_tools',
 		kids    => [ qw/instructor_user_detail/ ],
 		match   => qr|^users2/|,
@@ -382,18 +380,9 @@ our %pathTypes = (
 		produce => 'users2/',
 		display => 'WeBWorK::ContentGenerator::Instructor::UserList2',
 	},
-	instructor_user_list3 => {
-    		name    => 'Classlist Editor3',
-    		parent  => 'instructor_tools',
-    		kids    => [ qw/instructor_user_detail/ ],
-    		match   => qr|^users3/|,
-    		capture => [ qw// ],
-    		produce => 'users3/',
-    		display => 'WeBWorK::ContentGenerator::Instructor::UserList3',
-    	},
 	instructor_user_detail => {
 		name    => 'Sets assigned to $userID',
-		parent  => 'instructor_user_list',
+		parent  => 'instructor_user_list2',
 		kids    => [ qw/instructor_sets_assigned_to_user/ ],
 		match   => qr|^([^/]+)/|,
 		capture => [ qw/userID/ ],
@@ -413,7 +402,7 @@ our %pathTypes = (
 	################################################################################
 	
 	instructor_set_list => {
-		name    => 'Hmwk Sets Editor',
+		name    => 'Old Hmwk Sets Editor',
 		parent  => 'instructor_tools',
 		kids    => [ qw/instructor_set_detail/ ],
 		match   => qr|^sets/|,
@@ -422,7 +411,7 @@ our %pathTypes = (
 		display => 'WeBWorK::ContentGenerator::Instructor::ProblemSetList',
 	},
 	instructor_set_list2 => {
-		name    => 'Hmwk Sets Editor2',
+		name    => 'Hmwk Sets Editor',
 		parent  => 'instructor_tools',
 		kids    => [ qw/instructor_set_detail/ ],
 		match   => qr|^sets2/|,
@@ -432,7 +421,7 @@ our %pathTypes = (
 	},
 	instructor_set_detail => {
 		name    => 'Set Detail for set $setID',
-		parent  => 'instructor_set_list',
+		parent  => 'instructor_set_list2',
 		kids    => [ qw/instructor_users_assigned_to_set/ ],
 		match   => qr|^([^/]+)/|,
 		capture => [ qw/setID/ ],

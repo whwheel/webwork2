@@ -111,9 +111,9 @@ sub initialize {
 	
 	my (@viewable_sections,@viewable_recitations);
 	
-	if (defined @{$ce->{viewable_sections}->{$user}})
+	if (defined $ce->{viewable_sections}->{$user})
 		{@viewable_sections = @{$ce->{viewable_sections}->{$user}};}
-	if (defined @{$ce->{viewable_recitations}->{$user}})
+	if (defined $ce->{viewable_recitations}->{$user})
 		{@viewable_recitations = @{$ce->{viewable_recitations}->{$user}};}
 
 	if (@viewable_sections or @viewable_recitations){
@@ -262,8 +262,19 @@ sub initialize {
 	}
 	
 	my $remote_host;
+	# If its apache 2.4 then it has to also mod perl 2.0 or better
+	my $APACHE24 = 0;
 	if (MP2) {
-		$remote_host = $r->connection->remote_addr->ip_get || "UNKNOWN";
+	    Apache2::ServerUtil::get_server_banner() =~ 
+		       m:^Apache/(\d\.\d+\.\d+):;
+	    $APACHE24 = version->parse($1) >= version->parse('2.4.00');
+	}
+
+	# If its apache 2.4 then the API has changed
+	if ($APACHE24) {
+	    $remote_host = $r->connection->client_addr->ip_get || "UNKNOWN";
+	} elsif (MP2) {
+	    $remote_host = $r->connection->remote_addr->ip_get || "UNKNOWN";
 	} else {
 		(undef, $remote_host) = unpack_sockaddr_in($r->connection->remote_addr);
 		$remote_host = defined $remote_host ? inet_ntoa($remote_host) : "UNKNOWN";
@@ -308,8 +319,8 @@ sub initialize {
 	my $script_action     = '';
 	
 	
-	if(not defined($action) or $action eq 'Open'  
-	   or $action eq $UPDATE_SETTINGS_BUTTON ){  
+	if(not defined($action) or $action eq $r->maketext('Open')  
+	   or $action eq $r->maketext($UPDATE_SETTINGS_BUTTON )){  
 
 		return '';
 	}
@@ -434,7 +445,7 @@ sub initialize {
 			$r->post_connection($post_connection_action, $r);
 		}
 	} else {
-		$self->addbadmessage(CGI::p("Didn't recognize button $action"));
+		$self->addbadmessage(CGI::p("Didn't recognize action"));
 	}
 
 
@@ -558,7 +569,7 @@ sub print_form {
 		default_filters => ["all"],
 		size => 5,
 		multiple => 1,
-		refresh_button_name =>'Update settings and refresh page',
+		refresh_button_name =>$r->maketext('Update settings and refresh page'),
 	}, @{$ra_user_records});
 
 	##############################################################################################################
@@ -598,16 +609,16 @@ sub print_form {
 	#############################################################################################	
 
 			 CGI::td({},
-			     CGI::strong("Message file: "), $input_file,"\n",CGI::br(),
-				 CGI::submit(-name=>'action', -value=>'Open'), '&nbsp;&nbsp;&nbsp;&nbsp;',"\n",
+			     CGI::strong($r->maketext("Message file: ")), $input_file,"\n",CGI::br(),
+				 CGI::submit(-name=>'action', -value=>$r->maketext('Open')), '&nbsp;&nbsp;&nbsp;&nbsp;',"\n",
 				 CGI::popup_menu(-name=>'openfilename', 
 				                 -values=>\@sorted_messages, 
 				                 -default=>$input_file
 				 ), 
 				 "\n",CGI::br(),
-				 CGI::strong("Save file to: "), $output_file,
+				 CGI::strong($r->maketext("Save file to: ")), $output_file,
 				 "\n",CGI::br(),
-				 CGI::strong('Merge file: '), $merge_file, 
+				 CGI::strong($r->maketext('Merge file: ')), $merge_file, 
 				 CGI::br(),
 				 CGI::popup_menu(-name=>'merge_file', 
 				                 -values=>\@sorted_merge_files, 
@@ -616,15 +627,15 @@ sub print_form {
 				 "\n",
 				 #CGI::hr(),
 				 CGI::div(
-					 "\n", 'From:','&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;',  CGI::textfield(-name=>"from", -size=>30, -value=>$from, -override=>1),    
-					 "\n", CGI::br(),'Reply-To: ', CGI::textfield(-name=>"replyTo", -size=>30, -value=>$replyTo, -override=>1), 
-					 "\n", CGI::br(),'Subject:  ', CGI::br(), CGI::textarea(-name=>'subject', -default=>$subject, -rows=>3,-cols=>30, -override=>1),  
+					 "\n", $r->maketext('From:'),'&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;',  CGI::textfield(-name=>"from", -size=>30, -value=>$from, -override=>1),    
+					 "\n", CGI::br(),$r->maketext('Reply-To: '), CGI::textfield(-name=>"replyTo", -size=>30, -value=>$replyTo, -override=>1), 
+					 "\n", CGI::br(),$r->maketext('Subject:  '), CGI::br(), CGI::textarea(-name=>'subject', -default=>$subject, -rows=>3,-cols=>30, -override=>1),  
 				),
 				#CGI::hr(),
-				"Editor rows: ", CGI::textfield(-name=>'rows', -size=>3, -value=>$rows),
-				" columns: ", CGI::textfield(-name=>'columns', -size=>3, -value=>$columns),
+				$r->maketext("Editor rows: "), CGI::textfield(-name=>'rows', -size=>3, -value=>$rows),
+				$r->maketext(" columns: "), CGI::textfield(-name=>'columns', -size=>3, -value=>$columns),
 				CGI::br(),
-				CGI::submit(-name=>'action', -value=>$UPDATE_SETTINGS_BUTTON),
+				CGI::submit(-name=>'action', -value=>$r->maketext($UPDATE_SETTINGS_BUTTON)),
 				 
 			),
 	#############################################################################################
@@ -633,14 +644,14 @@ sub print_form {
 
 	## Edit by Mark to insert scrolling list
 					CGI::td({-style=>"width:33%"},
-					     CGI::strong("Send to:"),
+					     CGI::strong($r->maketext("Send to:")),
 		                  CGI::radio_group(-name=>'radio', 
 		                                   -values=>['all_students','studentID'],
-		                                   -labels=>{all_students=>'All students in course',studentID => 'Selected students'},
+		                                   -labels=>{all_students=>$r->maketext('All students in course'),studentID => $r->maketext('Selected students')},
 		                                   -default=>'studentID', -linebreak=>0), 
 							CGI::br(),$scrolling_user_list,
-							CGI::i("Preview set to: "), $preview_record->last_name,'(', $preview_record->user_id,')',
-							CGI::submit(-name=>'action', -value=>'preview',-label=>'Preview message'),'&nbsp;&nbsp;',
+							CGI::i($r->maketext("Preview set to: ")), $preview_record->last_name,'(', $preview_record->user_id,')',
+							CGI::submit(-name=>'action', -value=>'preview',-label=>$r->maketext('Preview message')),'&nbsp;&nbsp;',
 					),
 	); # end Tr
 	
@@ -653,18 +664,18 @@ sub print_form {
 			#show available macros
 				CGI::popup_menu(
 						-name=>'dummyName',
-						-values=>['', '$SID', '$FN', '$LN', '$SECTION', '$RECITATION','$STATUS', '$EMAIL', '$LOGIN', '$COL[3]', '$COL[-1]'],
+						-values=>['', '$SID', '$FN', '$LN', '$SECTION', '$RECITATION','$STATUS', '$EMAIL', '$LOGIN', '$COL[n]', '$COL[-1]'],
 						-labels=>{''=>'list of insertable macros',
 							'$SID'=>'$SID - Student ID',
 							'$FN'=>'$FN - First name',
 							'$LN'=>'$LN - Last name',
 							'$SECTION'=>'$SECTION',
 							'$RECITATION'=>'$RECITATION',
-							'$STATUS'=>'$STATUS - C, Audit, Drop, etc.',
+							'$STATUS'=>'$STATUS - Enrolled, Drop, etc.',
 							'$EMAIL'=>'$EMAIL - Email address',
 							'$LOGIN'=>'$LOGIN - Login',
-							'$COL[3]'=>'$COL[3] - 3rd col',
-							'$COL[-1]'=>'$COL[-1] - Last column'
+							'$COL[n]'=>'$COL[n] - nth colum of merge file',
+							'$COL[-1]'=>'$COL[-1] - Last column of merge file'
 							}
 				), "\n",
 			),
@@ -689,19 +700,20 @@ sub print_form {
 	#print actual body of message
 
 	print  "\n", CGI::p( $self->{message}) if defined($self->{message});  
-    print  "\n", CGI::p( CGI::textarea(-name=>'body', -default=>$text, -rows=>$rows, -cols=>$columns, -override=>1));
+	print "\n", CGI::label({'for'=>"email-body"},$r->maketext("Email Body:")),CGI::span({class=>"required-field"},'*');
+	print  "\n", CGI::p( CGI::textarea(-id=>"email-body", -name=>'body', -default=>$text, -rows=>$rows, -cols=>$columns, -override=>1));
 
 	#############################################################################################
 	#	action button table
 	#############################################################################################	
 	print    CGI::table( { -border=>2,-cellpadding=>4},
 				 CGI::Tr( {},
-					 CGI::td({}, CGI::submit(-name=>'action', -value=>'Send Email') ), "\n",
-					 CGI::td({}, CGI::submit(-name=>'action', -value=>'Save')," to $output_file"), " \n",
-					 CGI::td({}, CGI::submit(-name=>'action', -value=>'Save as:'),
+					 CGI::td({}, CGI::submit(-name=>'action', -value=>$r->maketext('Send Email')) ), "\n",
+					 CGI::td({}, CGI::submit(-name=>'action', -value=>$r->maketext('Save'))," to $output_file"), " \n",
+					 CGI::td({}, CGI::submit(-name=>'action', -value=>$r->maketext('Save as:')),
 					         CGI::textfield(-name=>'savefilename', -size => 20, -value=> "$output_file", -override=>1)
 					 ), "\n",
-					 CGI::td(CGI::submit(-name=>'action', -value=>'Save as Default')),
+					 CGI::td(CGI::submit(-name=>'action', -value=>$r->maketext('Save as Default'))),
 				) 
 	);
 			   

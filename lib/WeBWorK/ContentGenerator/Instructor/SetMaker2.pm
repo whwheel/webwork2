@@ -969,7 +969,7 @@ sub make_top_row {
 	<select id='library_selector' size=4 onchange='changeLibrary(\"mainform\", \"".$r->uri."\", this, \"view_problems_spinner\")'>"
 	;
 	print "<option value=\'browse_npl_library\'>National Problem Library</option>
-			<option value=\'browse_local\'>Local Problems</option>
+			<option value=\'browse_local\'>".$r->maketext("Local Problems")."</option>
 			<option value=\'edit_mysets\'>From this Course</option>
 			<option value=\'browse_setdefs\'>Set Definition Files</option>"
 	;
@@ -1016,7 +1016,7 @@ sub make_data_row {
 	#if($self->{r}->param('browse_which') ne 'browse_npl_library') {
 	my $problem_seed = $self->{'problem_seed'} || 1234;
 	my $edit_link = CGI::a({href=>$self->systemLink(
-		 $urlpath->newFromModule("WeBWorK::ContentGenerator::Instructor::PGProblemEditor", $r,
+		 $urlpath->newFromModule("WeBWorK::ContentGenerator::Instructor::PGProblemEditor2", $r,
 			  courseID =>$urlpath->arg("courseID"),
 			  setID=>"Undefined_Set",
 			  problemID=>"1"),
@@ -1610,15 +1610,10 @@ sub title {
 	return "Library Browser v2";
 }
 
-# hide view options panel since it distracts from SetMaker's built-in view options
-sub options {
-	return "";
-}
-
 sub head {
-  print '<script src="/webwork2_files/js/dnd.js"></script>';
-  print '<script src="/webwork2_files/js/problem_grid.js"></script>';
-  print '<script src="/webwork2_files/js/form_builder.js"></script>';
+  print '<script src="/webwork2_files/js/legacy/dnd.js"></script>';
+  print '<script src="/webwork2_files/js/legacy/problem_grid.js"></script>';
+  print '<script src="/webwork2_files/js/legacy/form_builder.js"></script>';
   #my ($self) = @_;
   #my $r = $self->r;
   #start a timer to save people's stuff idk if people want this
@@ -1649,7 +1644,7 @@ sub body {
 	my $authz = $r->authz;
 	unless ($authz->hasPermissions($userName, "modify_problem_sets")) {
 		print "User $userName returned " . 
-			$authz->hasPermissions($user, "modify_problem_sets") . 
+			$authz->hasPermissions($userName, "modify_problem_sets") . 
 	" for permission";
 		return(CGI::div({class=>'ResultsWithError'},
 		CGI::em("You are not authorized to access the Instructor tools.")));
@@ -1906,7 +1901,7 @@ sub body {
 	      print '</div>';
 	    #close problem_container
 	    print '</div>';
-	  print CGI::endform(), "\n";
+	  print CGI::end_form(), "\n";
 	  #close form-editor
 	print '</div>';
 	print '<div style="clear:both;"></div>';

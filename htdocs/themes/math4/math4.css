@@ -1,5 +1,5 @@
 /* WeBWorK Online Homework Delivery System
- * Copyright © 2000-2007 The WeBWorK Project, http://openwebwork.sf.net/
+ * Copyright ï¿½ 2000-2007 The WeBWorK Project, http://openwebwork.sf.net/
  * $CVSHeader: webwork2/conf/templates/math2/math2.css,v 1.1.2.1 2008/06/24 17:17:36 gage Exp $
  * 
  * This program is free software; you can redistribute it and/or modify it under
@@ -12,22 +12,82 @@
  * FOR A PARTICULAR PURPOSE.  See either the GNU General Public License or the
  * Artistic License for more details.
  */
+ 
+/* Bootstrap overrides */
+a:focus {
+    outline-style:solid;
+    outline-color:#aaaa00;
+    outline-width:1px;
+}
 
-/* Bootstrap Overrides */
+.btn:focus {
+    outline-style:solid;
+    outline-color:#aaaa00;
+    outline-width:2px;
+}
+
+.row-fluid [class*="span"] {
+    min-height:0px;
+}
+
+input[type="checkbox"] {
+    margin-right:.25em;
+}
+
+legend {
+    margin-bottom: 5px;
+    font-size:18px;
+}
+
 .container-fluid {
 	padding: 0.5em;
 }
 
+/* Basic elements */
+.required-field {
+    color:red;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+.sr-only-focusable:active,
+.sr-only-focusable:focus {
+  position: static;
+  width: auto;
+  height: auto;
+  margin: 0;
+  overflow: visible;
+  clip: auto;
+}
+.sr-only-glyphicon {
+ position: absolute;
+ width: 1em;
+ height: 1em;
+ padding: 0;
+ margin: 0;
+ margin-left: -1em;
+ overflow: hidden;
+ clip: rect(0px, 0px, 0px, 0px);
+ border: 0 none;
+}
+
 /* Banner */
-ul#masthead {
+#masthead {
 	background-color: #038;
-	list-style-type: none;
 	margin: 0;
 	padding: 0;
 	padding: 5px;
 }
 
-li.webwork_logo {
+.webwork_logo {
 	background-color: #1048ae;
 	font-size: 1.6em;
 	font-weight: 500;
@@ -36,67 +96,93 @@ li.webwork_logo {
 								the logo & text doesn't look lopsided */
 }
 
-li.webwork_logo img {
+.webwork_logo img {
 	padding-right: 5px; /* distance itself to the Webwork text */
 }
 
-li.maa_logo img {
+.maa_logo img {
 	vertical-align: center;
 }
 
-ul#masthead li {
-	display: inline-block;
-	margin-right: 1em;
-	background: 
-	margin: 0;
+.webwork_logo a,
+.maa_logo a {
+    display:block;
 }
 
-ul#masthead a {
+#masthead a {
 	color: white;
 }
 
-ul#masthead a:hover {
+#masthead a:hover {
 	text-decoration: none;
 }
 
-ul#masthead li#loginstatus {
-	margin-right: 2px;
-}
-
-li#loginstatus {
+#loginstatus {
+    	padding-top:.5ex;
 	color: white;
 	text-align: right;
-	padding: 0;
-	float: right;
 	font-size: 0.85em;
 	font-weight: normal;
 } 
-
-li#loginstatus a {
-	color: black;
-	margin-left: 0.5em;
+#loginstatus a.btn {
+    margin-bottom:.5ex;
 }
 
-li#loginstatus a .icon-signout {
+#loginstatus a {
+	color: black;
+}
+
+#loginstatus a .icon-signout {
 	font-size: 1em;
-	padding-left: 0.3em;
 }
 
 
 /* Nav */
-#site-navigation ul:first-child {
-	border-radius: 8px;
+
+#site-links ul {
 	border: 1px solid #e6e6e6;
 	background: #f6f6f6;
 	overflow: hidden;
+}
+
+#site-links ul ul {
+    border:0px;
 }
 
 ul.nav li a:hover {
 	background: #e1e1e1;	
 }
 
+#site-links h2 {
+    margin-top:0;
+    margin-bottom:0;
+    font-size:13px;
+}
+
 #site-navigation .info-box {
 	margin-top: 0.5em;
+}
+
+#site-navigation .info-box ul {
+        overflow: hidden;
+}
+
+#breadcrumb-row {
+    margin-top:1ex;
+}
+
+#toggle-sidebar {
+    float:left;
+    height:20px;
+    padding-top:8px;
+    padding-bottom:8px;
+}
+
+#breadcrumb-navigation {
+    float:left;
+    display:inline-block;
+    width:90%;
+    width:calc(100% - 40px);
 }
 
 /* Main Content */
@@ -109,17 +195,22 @@ ul.nav li a:hover {
 	width: 72%;
 }
 
+h1.page-title {
+	font-size: 31.5px;
+	line-height: 35px;
+}
+
 h2.page-title {
 	border-bottom: 1px solid #ccc;
 }
 
 #info-panel-right {
 	margin-bottom: 0.5em;
-	width: 25%;
+/*	width: 25%; 8*/
 	overflow: hidden;
 	display: inline-block;
 	vertical-align: top;
-	float: right;
+/*	float: right; */
 }
 
 .breadcrumb {
@@ -130,26 +221,33 @@ h2.page-title {
 	clear: both;
 }
 
+.Warnings code {
+    	white-space: normal;
+}
+
 /* Question nav section */
 .problem-nav {
-	width: 30%;
-	margin-bottom: 1em;
+	margin-bottom:1ex;
 	display: inline-block;
+	
 }
 
 /* Message section */
 
 .Message {
-	display: inline-block;
-}
+    display: inline-block;
+    margin-bottom:1ex;
+}   
 
-.Message div, .Message span {
-	background-color:#eee;
-	padding: 0.5em;
-}
+.font-visible   { font-weight: bold; }
+.font-hidden { font-style: italic; } 
 
-font.visible   { font-weight: bold; }
-font.hidden { font-style: italic; } 
+.admin-messagebox {
+    background-color:#FFFFCC;
+    width:60%;
+    padding: 10px;
+    text-align:center;
+}
 
 /* Home Page */
 ul.courses-list {
@@ -173,18 +271,60 @@ ul.courses-list a:hover {
 	color: white;
 }
 
+/* past answers page */
+.past-answer-table td {
+    white-space: nowrap;
+    min-width: 20px;
+}
+
+.past-answer-table .table-rule {
+    border-top: 3px solid #d5d5d5;
+    padding-top: 5px;
+}
+.past-answer-table .essay,
+.past-answer-table .comment {
+    min-width: 400px;
+    white-space: normal;
+}
+
 /* Classlist Editor */
 /* this table is a pain, it wants to be a certain width and it'll force you
  * to scroll if you don't have that width, don't know how to fix it */
+.label-with-edit-icon {
+    white-space:nowrap;
+}
+
+.label-with-edit-icon .set-label,
+.label-with-edit-icon div.tooltip {
+    white-space:normal;
+}
+
 table.classlist-table {
-	display: block;
-	max-width: 95%; /* prevent it from violating container-fluid's padding,
+/*	display: block; */
+        max-width: 95%; /* prevent it from violating container-fluid's padding,
 					 only valid in a rare edge case */
+}
+
+table.classlist-table .tbody {
+    width: 100%;
+}
+
+.UserDetail-date-table td {
+    padding-left:.5em;
 }
 
 /* Homework Sets */
 .problem_set_body input[type='checkbox'], .problem_set_body input[type='radio'] {
-	margin: 0.5em; /* keep the assignment buttons from crowding chkbox */
+    margin-top: 0px;
+}
+
+.problem_set_table td a {
+    font-weight:bold;
+    font-size:13px;
+}
+
+.problem_set_table .hardcopy-link {
+    font-size:16px;
 }
 
 /* Info Box */
@@ -239,6 +379,18 @@ table.classlist-table {
     margin-bottom:0px;
 }
 
+/* Gateway Options */
+
+#sp-gateway-form{
+	background-color: #eeeeee;
+	color: black;
+}
+
+#sp-gateway-form label{
+    display: inline-block;
+	padding-right: 15px;    
+}
+
 /* Library Browser */
 .library-browser-table td {
 	padding-top: 0.2em;
@@ -253,7 +405,7 @@ table.classlist-table {
 	clear: both;
 	display: block;
 	font-size: 0.8em;
-	color: #888;
+	color: #767676;
 	text-align: center;
 	padding: 1em;
 	margin-top: 1em;
@@ -286,9 +438,17 @@ textarea {
   line-height: 18px;
   width: auto;
 }
+
 input {
 	height: auto;
 }
+
+input[type="text"],
+textarea,
+select {
+    max-width:95%;
+}
+
 .barrier {
 	clear:both;
 	border: none; /* 1px solid grey; */
@@ -314,18 +474,18 @@ input {
 	font-size:100%;
 }
 
-#problem-content {
-  margin-left:auto;
-  margin-right:auto;
-  border: 2px solid black;
-  padding: 10px;
-
-}
 table.FormLayout { border: 0; }
 table.FormLayout tr { vertical-align: top; }
 table.FormLayout th.LeftHeader { text-align: right; white-space: nowrap; }
 table.FormLayout tr.ButtonRow { text-align: left; }
 table.FormLayout tr.ButtonRowCenter { text-align: center; }
+table.FormLayout td { padding-right:10px; padding-bottom:.5ex; }
+
+table.FormLayout tr.ButtonRow,
+table.FormLayout tr.ButtonRowCenter, 
+table.FormLayout tr.ButtonRowCenter tr {
+    vertical-align: middle;
+}
 
 div.RenderSolo { background-color: #E0E0E0; color: black; }
 div.AuthorComment { background-color: #00E0E0; color: black; }
@@ -335,22 +495,60 @@ div.AuthorComment { background-color: #00E0E0; color: black; }
 /*ul.LinksMenu ul { list-style: none; margin-left: 0.5em; padding-left: 0; }*/
 
 /* background styles for success and failure messages */
-div.WarningMessage { background-color: #FF9494; padding: 3px 3px 3px 3px; }
+div.WarningMessage { background-color: #D69191; padding: 3px 3px 3px 3px; } /* red */
 div.ResultsWithoutError { color: inherit; background-color: #8F8; } /* green */
-div.ResultsWithError { color: #FF9494; background-color: inherit; } /* error red, from http://www.colourlovers.com/color/FF9494/error_red*/
-div.ResultsAlert { color: #F60; background-color: inherit; } /* orange */
-label.WarningMessage { background-color: #FF9494; padding: 3px 3px 3px 3px; }
+div.ResultsWithError { color: #bf5454; background-color: inherit; } /* red */
+div.ResultsAlert { color: #ca5000; background-color: inherit; } /* orange */
+div.showMeAnotherBox { background-color: #EDE275; border-radius: 5px; border: 2px solid #FDD017; padding: 3px 3px 3px 3px} /* bright gold border and harvest gold background*/
+label.WarningMessage { background-color: #D69191; padding: 3px 3px 3px 3px; } /* red */
 label.ResultsWithoutError { color: inherit; background-color: #8F8; } /* green */
-label.ResultsWithError { color: #FF9494; background-color: inherit; } /* error red, from http://www.colourlovers.com/color/FF9494/error_red*/
-label.ResultsAlert { color: #F60; background-color: inherit; } /* orange */
-span.WarningMessage { background-color: #FF9494; padding: 3px 3px 3px 3px; }
+label.ResultsWithError { color: #bf5454; background-color: inherit; } /* red*/
+label.ResultsAlert { color: #ca5000; background-color: inherit; } /* orange */
+span.WarningMessage { background-color: #D69191; padding: 3px 3px 3px 3px; } /* red*/
 span.ResultsWithoutError { color: inherit; background-color: #8F8; } /* green */
-span.ResultsWithError { color: #FF9494; background-color: inherit; } /* error red, from http://www.colourlovers.com/color/FF9494/error_red*/
-span.ResultsAlert { color: #F60; background-color: inherit; } /* orange */
+span.ResultsWithError { color: #bf5454; background-color: inherit; } /* red*/
+span.ResultsAlert { color: #ca5000; background-color: inherit; } /* orange */
 span.correct { color: inherit; background-color: #8F8; } /* green */
-span.incorrect { color: #FF9494; background-color: inherit; } /* red */
-input.correct   { color:inherit; background-color: #8F8; } /* green */
-input.incorrect { color;inherit; background-color: #FF9494; } /* red */
+span.incorrect { color: #bf5454; background-color: inherit; } /* red */
+span.unattempted { color: inherit; background-color: #88ECFF;}
+input.correct[type="text"]{ /* green */
+    border-color: rgba(81,153,81, 0.8);
+    outline: 0;
+    outline: thin dotted \9;
+    /* IE6-9 */
+    
+    -webkit-box-shadow: inset 0 1px 1px rgba(0,0,0,.075), 0 0 8px rgba(81,153,81, ,.6);
+    -moz-box-shadow: inset 0 1px 1px rgba(0,0,0,.075), 0 0 8px rgba(81,153,81,.6);
+    box-shadow: inset 0 1px 1px rgba(0,0,0,.075), 0 0 8px rgba(81,153,81,.6);
+    
+    color:inherit; 
+}
+
+input.incorrect[type="text"] { /* red */
+  border-color: rgba(191, 84, 84, 0.8);
+  outline: 0;
+  outline: thin dotted \9;
+  /* IE6-9 */
+
+  -webkit-box-shadow: inset 0 1px 1px rgba(0,0,0,.075), 0 0 8px rgba(191,84,84,.6);
+  -moz-box-shadow: inset 0 1px 1px rgba(0,0,0,.075), 0 0 8px rgba(191,84,84,.6);
+  box-shadow: inset 0 1px 1px rgba(0,0,0,.075), 0 0 8px rgba(191,84,84,.6);
+    color:inherit; 
+}
+
+input.changed[type="text"] { /* orange */
+  border-color: #ca5000;
+  outline: 0;
+ outline: thin dotted \9;
+  /* IE6-9 */
+  -webkit-box-shadow: inset 0 1px 1px rgba(0,0,0,.075), 0 0 8px rgba(202, 80, 0, 0.6);
+  box-shadow: inset 0 1px 1px rgba(0,0,0,.075), 0 0 8px rgba(202, 80, 0, 0.6);
+  color: inherit;
+}
+
+.results-popover {
+    cursor : pointer;
+}
 
 /* styles used by WeBWorK::HTML::ScrollingRecordList */
 div.ScrollingRecordList { padding: 1em; white-space: nowrap; border: thin solid gray; }
@@ -366,6 +564,7 @@ div.ScrollingRecordList select.ScrollingRecordList { width: 99%; }
 
 .viewOptions label {
     font-size:small;
+    display:block;
 }
 
 /* messages, attempt results, answer previews, etc. go in this DIV */
@@ -389,11 +588,21 @@ table.attemptResults th {
 	border-style: inset; 
 	border-width: 1px; 
 	text-align: center; 
+	vertical-align: middle;
 	/*width: 15ex;*/ /* this was erroniously commented out with "#" */
 	padding: 2px 5px 2px 5px;
 	color: inherit;
 	background-color: #DDDDDD;
 }
+
+.attemptResults .popover {
+    max-width: 100%;
+}
+
+table.attemptResults td.FeedbackMessage { background-color:#EDE275;} /* Harvest Gold */
+table.attemptResults td.ResultsWithoutError { background-color:#8F8;}
+span.ResultsWithErrorInResultsTable { color: inherit; background-color: inherit; } /* used to override the older red on white span */ 
+table.attemptResults td.ResultsWithError { background-color:#D69191; color: #000000} /* red */
 
 /*styles for the instructor comment box */
 
@@ -409,6 +618,20 @@ table.attemptResults th {
     background-color: #E8E8E8;
 }
 
+/* Make hr a black line for problem render areas so that
+ * it can be used for fractions
+ */
+.RenderSolo hr,
+.problem-content hr {
+  margin-top: 5px;
+  margin-bottom: 5px;
+  border-top-color: rgb(22,22,22);
+}
+
+.problem-content label {
+    font-size: 14px;
+}
+
 /* override above settings in tables used to display ans_array results */
 table.attemptResults td td,
 table.attemptResults td th,
@@ -422,7 +645,7 @@ table.attemptResults td.Message {
    padding: 2px 5px 2px 5px;
    width: auto;
 }
-.attemptResultsSummary { font-style: italic; }
+.attemptResultsSummary { margin-bottom: 10px; }
 .parsehilight { color: inherit; background-color: yellow; }
 
 .problem-main-form input {
@@ -448,7 +671,7 @@ div.NoFontMessage {
 }
 
 /* styles used when editing a temporary file */
-.temporaryFile { font-style: italic; color: #F60; background-color: inherit; }
+.temporaryFile { font-style: italic; color: #ca5000; background-color: inherit; }
 
 /* text colors for Auditing, Current, and Dropped students */
 .Audit { font-style: normal; color: purple; background-color: inherit; }
@@ -479,8 +702,7 @@ div.NoFontMessage {
 
 /*Following are mostly alignment fixes for the input elements and their lables on this page.*/
 .edit_form  input,select{
-	margin-top: .25em;
-	margin-bottom: .25em;
+	margin-bottom: .5em;
 }
 
 .edit_form label {
@@ -511,7 +733,6 @@ div.NoFontMessage {
 }
 
 .set_table th{
-	text-align: center;
 	padding-right: 5px;
 	padding-left: 5px;
 }
@@ -525,7 +746,6 @@ div.NoFontMessage {
 /*General styles for table captions*/
 table caption{
 	font-weight: bold;
-	text-decoration: underline;
 }
 
 /*Styling the content that is found in the login page.*/
@@ -671,8 +891,8 @@ table caption{
 
 #pg_editor_frame_id{
     width:95%;
-    height:390px;
-    overflow:hidden;
+    height:590px;
+    overflow:scroll;
 }
 
 #render-modal.modal {
@@ -683,6 +903,7 @@ table caption{
 #render-modal .modal-body {
     height:95%;
     width:95%;
+    max-height:600px;
 }
 
 .radio_span, 
@@ -713,6 +934,18 @@ table.problem_sets_table td{
 div.problem_sets_options {
 	clear: both;
 	margin: 1% 1% 1% 1%;
+}
+
+#set_table_id a.set-id-tooltip,
+#set_table_id a.set-id-tooltip:hover {
+    text-decoration: none;
+    color: #000000;
+}
+
+
+.ScrollingRecordList > input[type='submit'] {
+    margin-top: 1ex;
+    margin-bottom: 2ex;
 }
 
 /*This is the styling specifically for the tables of problems displayed for each problem set page*/
@@ -750,13 +983,14 @@ table#grades_table pre{
 }
 
 #mainform i.icon-random {
-    cursor: hand;
+    cursor: pointer;
 }
 
 #send-mail-form input,
 #send-mail-form select,
 .set-list-form input,
 .set-list-form select,
+.set-list-form button,
 .user-list-form input,
 .user-list-form select {
     margin-top: .15em;
@@ -772,10 +1006,9 @@ table#grades_table pre{
     height:auto;
 }
 
-#problem_set_form .btn {
-    margin-left:.5ex;
-    margin-right:.5ex;
-}
+#problem_set_form input[type="submit"] {
+    margin-right:1ex;
+} 
 
 #mainform .btn,
 #problem_set_form .btn {
@@ -783,11 +1016,13 @@ table#grades_table pre{
     margin-top:.25ex;
 }
 
+#problem_set_form .ui-datepicker-trigger {
+    margin: 0;
+}
+
 #problem_set_form input[type="checkbox"] {
     margin-bottom:.5ex;
 }
-
-
 
 #editor input[type="radio"]{
     margin-right:.5ex;
@@ -796,6 +1031,13 @@ table#grades_table pre{
 
 #problem-grader-form select {
     width:60px;
+}
+
+#problem-grader-form .graded-answer,
+#problem-grader-form .essay-answer {
+    border-bottom: 1px solid #d5d5d5;
+    margin-bottom:2px;
+    padding-bottom:5px;
 }
 
 .tab-pane {
@@ -811,3 +1053,12 @@ table#grades_table pre{
     font-size:small;
 }
 
+/* Equation editor bugfixes */
+#eqEditorDiv {
+    overflow:visible;
+}
+
+#openEqEditor {
+    min-height:35px;
+    min-width:43px;
+}

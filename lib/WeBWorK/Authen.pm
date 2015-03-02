@@ -50,6 +50,7 @@ subclasses.
 
 use strict;
 use warnings;
+use version;
 use WeBWorK::Cookie;
 use Date::Format;
 use Socket qw/unpack_sockaddr_in inet_ntoa/; # for logging
@@ -62,7 +63,6 @@ use Scalar::Util qw(weaken);
 
 use mod_perl;
 use constant MP2 => ( exists $ENV{MOD_PERL_API_VERSION} and $ENV{MOD_PERL_API_VERSION} >= 2 );
-
 
 #####################
 ## WeBWorK-tr modification
@@ -232,9 +232,7 @@ sub verify {
 		if (defined $log_error) {
 			$self->write_log_entry("LOGIN FAILED $log_error");
 		}
-
 		if (defined($error) and $error=~/\S/) { # if error message has a least one non-space character. 
-
 
 			if (defined($r->param("user")) or defined($r->param("user_id"))) {
 				$error = $r->maketext("Your authentication failed.  Please try again."
@@ -324,7 +322,7 @@ sub get_credentials {
 		my @allowedGuestUsers = grep { $ce->status_abbrev_has_behavior($_->status, "allow_course_access") } @GuestUsers;
 		my @allowedGestUserIDs = map { $_->user_id } @allowedGuestUsers;
 		
-		foreach my $userID (@allowedGestUserIDs) {
+		foreach my $userID (List::Util::shuffle(@allowedGestUserIDs)) {
 			if (not $self->unexpired_session_exists($userID)) {
 				my $newKey = $self->create_session($userID);
 				$self->{initial_login} = 1;
@@ -380,7 +378,7 @@ sub get_credentials {
 			$self->{password} = $r->param("passwd");
 			$self->{login_type} = "normal";
 			$self->{credential_source} = "params";
-			debug("params user '", $self->{user_id}, "' password '", $self->{password}, "' key '", $self->{session_key}, "'");
+			debug("params user '", $self->{user_id}, "' key '", $self->{session_key}, "'");
 			return 1;
 		} elsif (defined $cookieKey) {
 			$self->{user_id} = $cookieUser;
@@ -409,7 +407,7 @@ sub get_credentials {
 		$self->{password} = $r->param("passwd");
 		$self->{login_type} = "normal";
 		$self->{credential_source} = "params";
-		debug("params user '", $self->{user_id}, "' password '", $self->{password}, "' key '", $self->{session_key}, "'");
+		debug("params user '", $self->{user_id}, "' key '", $self->{session_key}, "'");
 		return 1;
 	}
 	
@@ -534,6 +532,7 @@ sub verify_normal_user {
 			return 0;
 		} else { # ($auth_result < 0) => required data was not present
 			if ($keyMatches and not $timestampValid) {
+				$self->{log_error} = "inactivity timeout";
 				$self->{error} .= $r->maketext("Your session has timed out due to inactivity. Please log in again.");
 			}
 			return 0;
@@ -610,7 +609,7 @@ sub set_params {
 	$r->param("key", $self->{session_key});
 	$r->param("passwd", "");
 	
-	debug("params user='", $r->param("user"), "' key='", $r->param("key"), "' passwd='", $r->param("passwd"), "'");
+	debug("params user='", $r->param("user"), "' key='", $r->param("key"), "'");
 }
 
 ################################################################################
@@ -771,7 +770,7 @@ sub killSession {
 		$self -> killCookie();
 	}
 
-	my $userID = $r -> {user_id};
+	my $userID = $r -> param("user");
 	if (defined($userID)) {
 		 $db -> deleteKey($userID);
 	}
@@ -904,7 +903,19 @@ sub write_log_entry {
 	my $credential_source = defined $self->{credential_source} ? $self->{credential_source} : "";
 	
 	my ($remote_host, $remote_port);
-	if (MP2) {
+
+	# If its apache 2.4 then it has to also mod perl 2.0 or better
+	my $APACHE24 = 0;
+	if (MP2 && Apache2::ServerUtil::get_server_banner() =~ 
+	  m:^Apache/(\d\.\d+\.\d+):) {
+	    $APACHE24 = version->parse($1) >= version->parse('2.4.00');
+	}
+
+	# If its apache 2.4 then the API has changed
+	if ($APACHE24) {
+	    	$remote_host = $r->connection->client_addr->ip_get || "UNKNOWN";
+		$remote_port = $r->connection->client_addr->port || "UNKNOWN";
+	} elsif (MP2) {
 		$remote_host = $r->connection->remote_addr->ip_get || "UNKNOWN";
 		$remote_port = $r->connection->remote_addr->port || "UNKNOWN";
 	} else {

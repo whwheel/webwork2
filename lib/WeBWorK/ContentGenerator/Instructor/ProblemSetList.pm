@@ -265,7 +265,7 @@ sub pre_header_initialize {
 		if ($scope eq "none") { 
 			return "No sets selected for scoring.";
 		} elsif ($scope eq "all") {
-			@setsToScore = @{ $r->param("allSetIDs") };
+		    @setsToScore = $db->listGlobalSets;
 		} elsif ($scope eq "visible") {
 			@setsToScore = @{ $r->param("visibleSetIDs") };
 		} elsif ($scope eq "selected") {
@@ -383,7 +383,7 @@ sub initialize {
 			}
 			my %actionParams = $self->getActionParams($actionID);
 			my %tableParams = $self->getTableParams();
-			$self->addmessage( CGI::div({class=>"Message"}, "Results of last action performed: "));
+			$self->addmessage( CGI::div("Results of last action performed: "));
 			$self->addmessage(
 			                     $self->$actionHandler(\%genericParams, \%actionParams, \%tableParams), 
 			                     CGI::hr()
@@ -450,7 +450,7 @@ sub body {
 		$r->maketext("Due Date"), 
 		$r->maketext("Answer Date"), 
 		$r->maketext("Visible"),
-		$r->maketext("Reduced Credit Enabled") 
+		$r->maketext("Reduced Scoring Enabled") 
 	);
 	
 
@@ -587,7 +587,7 @@ sub body {
 	
 	########## first adjust heading if in editMode
 	$prettyFieldNames{set_id} = $r->maketext("Edit All Set Data") if $editMode;
-	$prettyFieldNames{enable_reduced_scoring} = $r->maketext('Enable Reduced Credit') if $editMode;
+	$prettyFieldNames{enable_reduced_scoring} = $r->maketext('Enable Reduced Scoring') if $editMode;
 	
 	
 	print CGI::p({},$r->maketext("Showing"), " ", scalar @visibleSetIDs, " ", $r->maketext("out of"), " ", scalar @allSetIDs, $r->maketext("sets").".");
@@ -755,7 +755,7 @@ sub sort_form {
 		$r->maketext("Primary sort").": ",
 		CGI::popup_menu(
 			-name => "action.sort.primary",
-			-values => [qw(set_id set_header hardcopy_header open_date due_date answer_date visible)],
+			-values => [qw(set_id open_date due_date answer_date visible)],
 			-default => $actionParams{"action.sort.primary"}->[0] || "due_date",
 			-labels => {
 				set_id		=> $r->maketext("Set Name"),
@@ -923,6 +923,7 @@ sub publish_handler {
 sub enable_reduced_scoring_form {
 	my ($self, $onChange, %actionParams) = @_;
 	my $r = $self->r;
+	my $ce = $self->ce;
 
 	return join ("",
 		"Make ",
@@ -957,6 +958,7 @@ sub enable_reduced_scoring_handler {
 
 	my $r = $self->r;
 	my $db = $r->db;
+	my $ce = $r->ce;
 
 	my $result = "";
 	
@@ -972,19 +974,28 @@ sub enable_reduced_scoring_handler {
 		$result =  CGI::div({class=>"ResultsWithError"}, "No change made to any set.");
 	} elsif ($scope eq "all") {
 		@setIDs = @{ $self->{allSetIDs} };
-		$result = CGI::div({class=>"ResultsWithoutError"},"Reduced Credit $verb for all sets.");
+		$result = CGI::div({class=>"ResultsWithoutError"},"Reduced Scoring $verb for all sets.");
 	} elsif ($scope eq "visible") {
 		@setIDs = @{ $self->{visibleSetIDs} };
-		$result = CGI::div({class=>"ResultsWithoutError"},"Reduced Credit $verb for visable sets.");
+		$result = CGI::div({class=>"ResultsWithoutError"},"Reduced Scoring $verb for visable sets.");
 	} elsif ($scope eq "selected") {
 		@setIDs = @{ $genericParams->{selected_sets} };
-		$result = CGI::div({class=>"ResultsWithoutError"},"Reduced Credit $verb for selected sets.");
+		$result = CGI::div({class=>"ResultsWithoutError"},"Reduced Scoring $verb for selected sets.");
 	}
 	
 	# can we use UPDATE here, instead of fetch/change/store?
 	my @sets = $db->getGlobalSets(@setIDs);
 	
-	map { $_->enable_reduced_scoring("$value") if $_; $db->putGlobalSet($_); } @sets;
+	foreach my $set (@sets) {
+	    next unless $set;
+	    $set->enable_reduced_scoring("$value");
+	    if ($value  && !$set->reduced_scoring_date) {
+		$set->reduced_scoring_date($set->due_date -
+					  60*$ce->{pg}{ansEvalDefaults}{reducedScoringPeriod});
+	    }
+	    $db->putGlobalSet($set);
+	}
+	
 	
 	return $result
 	
@@ -1434,7 +1445,8 @@ sub saveEdit_handler {
 	my ($self, $genericParams, $actionParams, $tableParams) = @_;
 	my $r           = $self->r;
 	my $db          = $r->db;
-	
+	my $ce          = $r->ce;
+
 	my @visibleSetIDs = @{ $self->{visibleSetIDs} };
 	foreach my $setID (@visibleSetIDs) {
 		my $Set = $db->getGlobalSet($setID); # checked
@@ -1446,6 +1458,14 @@ sub saveEdit_handler {
 			if (defined $tableParams->{$param}->[0]) {
 				if ($field =~ /_date/) {
 					$Set->$field($self->parseDateTime($tableParams->{$param}->[0]));
+				} elsif ($field eq 'enable_reduced_scoring') {
+				    #If we are enableing reduced scoring, make sure the reduced scoring date is set
+				    my $value = $tableParams->{$param}->[0];
+				    $Set->enable_reduced_scoring($value);
+				    if (!$Set->reduced_scoring_date) {
+					$Set->reduced_scoring_date($Set->due_date -
+								  60*$ce->{pg}{ansEvalDefaults}{reducedScoringPeriod});
+				    }
 				} else {
 					$Set->$field($tableParams->{$param}->[0]);
 				}
@@ -1711,7 +1731,8 @@ sub importSetsFromDef {
 			  sourceFile => $rh_problem->{source_file},
 			  problemID => $freeProblemID++,
 			  value => $rh_problem->{value},
-			  maxAttempts => $rh_problem->{max_attempts});
+			  maxAttempts => $rh_problem->{max_attempts},
+			  showMeAnother => $rh_problem->{showMeAnother});
 		}
 
 
@@ -1733,6 +1754,7 @@ sub readSetDef {
 	my $filePath      = "$templateDir/$fileName";
 	my $value_default = $self->{ce}->{problemDefaults}->{value};
 	my $max_attempts_default = $self->{ce}->{problemDefaults}->{max_attempts};
+	my $showMeAnother = $self->{ce}->{problemDefaults}->{showMeAnother};
 
 	my $setName = '';
 
@@ -1846,6 +1868,8 @@ sub readSetDef {
 	
                 #####################################################################
                 # Gateway/version variable cleanup: convert times into seconds
+		$assignmentType ||= 'default';
+
 		$timeInterval = WeBWorK::Utils::timeToSec( $timeInterval )
 		    if ( $timeInterval );
 		$versionTimeLimit = WeBWorK::Utils::timeToSec($versionTimeLimit)
@@ -1915,7 +1939,13 @@ sub readSetDef {
 			## anything left?
 			push(@line, $curr) if ( $curr );
 			
-			($name, $value, $attemptLimit, $continueFlag) = @line;
+            # read the line and only look for $showMeAnother if it has the correct number of entries
+            # otherwise the default value will be used
+            if(scalar(@line)==4){
+			    ($name, $value, $attemptLimit, $showMeAnother, $continueFlag) = @line;
+            } else {
+			    ($name, $value, $attemptLimit, $continueFlag) = @line;
+            }
 			#####################
 			#  clean up problem values
 			###########################
@@ -1931,6 +1961,7 @@ sub readSetDef {
 			push(@problemData, {source_file    => $name,
 			                    value          =>  $value,
 			                    max_attempts   =>, $attemptLimit,
+			                    showMeAnother   =>, $showMeAnother,
 			                    continuation   => $continueFlag 
 			                    });
 		}
@@ -2011,12 +2042,14 @@ SET:	foreach my $set (keys %filenames) {
 			my $source_file   = $problemRecord->source_file();
 			my $value         = $problemRecord->value();
 			my $max_attempts  = $problemRecord->max_attempts();
+			my $showMeAnother  = $problemRecord->showMeAnother();
 			
 			# backslash-escape commas in fields
 			$source_file =~ s/([,\\])/\\$1/g;
 			$value =~ s/([,\\])/\\$1/g;
 			$max_attempts =~ s/([,\\])/\\$1/g;
-			$problemList     .= "$source_file, $value, $max_attempts \n";
+			$showMeAnother =~ s/([,\\])/\\$1/g;
+			$problemList     .= "$source_file, $value, $max_attempts, $showMeAnother \n";
 		}
 
 		# gateway fields
@@ -2147,18 +2180,24 @@ sub fieldEditHTML {
 	}
 	
 	if ($type eq "checked") {
-		
-		# FIXME: kludge (R)
-		# if the checkbox is checked it returns a 1, if it is unchecked it returns nothing
-		# in which case the hidden field overrides the parameter with a 0
-		return CGI::checkbox(
-			-name => $fieldName,
-			-checked => $value,
-			-label => "",
-			-value => 1
-		) . CGI::hidden(
-			-name => $fieldName,
-			-value => 0
+	
+	    my %attr = ( name => $fieldName,
+			 label => "",
+			 value => 1
+		);
+	    
+	    $attr{'checked'} = 1 if ($value);
+	    
+	    
+	    
+	    
+	    
+	    # FIXME: kludge (R)
+	    # if the checkbox is checked it returns a 1, if it is unchecked it returns nothing
+	    # in which case the hidden field overrides the parameter with a 0
+	    return CGI::checkbox( \%attr ) . CGI::hidden(
+		-name => $fieldName,
+		-value => 0
 		);
 	}
 }
@@ -2178,8 +2217,8 @@ sub recordEditHTML {
 	my $exportMode = $options{exportMode};
 	my $setSelected = $options{setSelected};
 
-	my $visibleClass = $Set->visible ? "visible" : "hidden";
-	my $enable_reduced_scoringClass = $Set->enable_reduced_scoring ? $r->maketext('Reduced Credit Enabled') : $r->maketext('Reduced Credit Disabled');
+	my $visibleClass = $Set->visible ? "font-visible" : "font-hidden";
+	my $enable_reduced_scoringClass = $Set->enable_reduced_scoring ? $r->maketext('Reduced Scoring Enabled') : $r->maketext('Reduced Scoring Disabled');
 
 	my $users = $db->countSetUsers($Set->set_id);
 	my $totalUsers = $self->{totalUsers};
@@ -2255,7 +2294,12 @@ sub recordEditHTML {
 	} else {
 		@fieldsToShow = @{ VIEW_FIELD_ORDER() };
 	}
-	
+
+	# Remove the enable reduced scoring box if that feature isnt enabled
+	if (!$ce->{pg}{ansEvalDefaults}{enableReducedScoring}) {
+	    @fieldsToShow = grep {$_ ne 'enable_reduced_scoring'} @fieldsToShow;
+	}
+
 	# make a hash out of this so we can test membership easily
 	my %nonkeyfields; @nonkeyfields{$Set->NONKEYFIELDS} = ();
 	
@@ -2282,6 +2326,7 @@ sub recordEditHTML {
 sub printTableHTML {
 	my ($self, $SetsRef, $fieldNamesRef, %options) = @_;
 	my $r                       = $self->r;
+	my $ce = $r->ce;
 	my $authz                   = $r->authz;
 	my $user                    = $r->param('user');
 	my $setTemplate	            = $self->{setTemplate};
@@ -2309,6 +2354,11 @@ sub printTableHTML {
 		@realFieldNames = @{ EXPORT_FIELD_ORDER() };
 	}
 
+	
+	# Remove the enable reduced scoring box if that feature isnt enabled
+	if (!$ce->{pg}{ansEvalDefaults}{enableReducedScoring}) {
+	    @realFieldNames = grep {$_ ne 'enable_reduced_scoring'} @realFieldNames;
+	}
 	
 	my %sortSubs = %{ SORT_SUBS() };
 

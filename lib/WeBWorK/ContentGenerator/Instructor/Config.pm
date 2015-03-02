@@ -108,7 +108,7 @@ sub what_string {
 				border=>"0", alt=>"$self->{var}", 
 				style=>"float: right; padding-left: 0.1em;"})
 		) .
-		$self->{doc} 
+		$r->maketext($self->{doc}) 
 	));
 }
 
@@ -124,6 +124,49 @@ sub save_string {
 	return '' if($displayoldval eq $newval);
 	# Remove quotes from the string, we will have a new type for text with quotes
 	$newval =~ s/['"`]//g; #`"'geditsucks
+	return('$'. $varname . " = '$newval';\n");
+}
+
+########################### configtimezone
+########################### just like text, but it validates the timezone before saving
+package configtimezone;
+@configtimezone::ISA = qw(configobject);
+
+#use DateTime;
+use DateTime::TimeZone;
+
+sub save_string {
+	my ($self, $oldval, $newvalsource) = @_;
+	my $varname = $self->{var};
+	my $newval = $self->convert_newval_source($newvalsource);
+	my $displayoldval = $self->comparison_value($oldval);
+	return '' if($displayoldval eq $newval);
+	if(not DateTime::TimeZone->is_valid_name($newval)) {
+		$self->{Module}->addbadmessage("String '$newval' is not a valid time zone.  Reverting to the system default value.");
+		return '';
+	}
+	# Remove quotes from the string, we will have a new type for text with quotes
+	$newval =~ s/['"`]//g; #`"'geditsucks
+	return('$'. $varname . " = '$newval';\n");
+}
+
+########################### configtime
+########################### just like text, but it validates the time before saving
+package configtime;
+@configtime::ISA = qw(configobject);
+
+sub save_string {
+	my ($self, $oldval, $newvalsource) = @_;
+	my $varname = $self->{var};
+	my $newval = $self->convert_newval_source($newvalsource);
+	my $displayoldval = $self->comparison_value($oldval);
+	return '' if($displayoldval eq $newval);
+
+	if($newval !~ /^(01|1|02|2|03|3|04|4|05|5|06|6|07|7|08|8|09|9|10|11|12):[0-5]\d(am|pm|AM|PM)$/) {
+		$self->{Module}->addbadmessage("String '$newval' is not a valid time.  Reverting to the system default value.");
+		return '';
+	}
+
 	return('$'. $varname . " = '$newval';\n");
 }
 
@@ -350,24 +393,24 @@ package configpopuplist;
 sub display_value {
 	my ($self, $val) = @_;
 	$val = 'ur' if not defined($val);
+
+	if ($self->{labels}->{$val}) {
+	    return join(CGI::br(), $self->{labels}->{$val});
+	}
+
 	return join(CGI::br(), $val);
 }
 
-# here r->param() returns an array, so we need a custom
-# version of convert_newval_source
+# if there are labels we need to make sure not to save the label of the value
+# version of comparison value
 
-# sub convert_newval_source {
-# 	my ($self, $newvalsource) = @_;
-#     my $inlinevarname = WeBWorK::ContentGenerator::Instructor::Config::inline_var($self->{var});
-#     my @newvals;
-#     if($newvalsource =~ /widget/) {
-#         @newvals = $self->{Module}->{r}->param($newvalsource);
-#     } else {
-#         my $newval = eval('$self->{Module}->{r}->{ce}->'. $inlinevarname);
-# 		@newvals = @$newval;
-#     }
-# 	return(@newvals);
-# }
+# Stringified version for comparison (with html param return value)
+sub comparison_value {
+	my ($self, $val) = @_;
+	return $val;
+}
+
+
 
 sub save_string {
 	my ($self, $oldval, $newvalsource) = @_;
@@ -387,10 +430,12 @@ sub save_string {
 
 sub entry_widget {
 	my ($self, $name, $default) = @_;
+
 	return CGI::popup_menu(
 		-name => $name,
 		-values => $self->{values},
 		-default => $default,
+	        -labels => $self->{labels},
 
 	);
 }
@@ -492,6 +537,7 @@ sub getConfigValues {
 	my $languages =[ grep {!$seen{$_} ++}        # remove duplicate items
 			     map {$_=~s/\...$//; $_}        # get rid of suffix 
                  grep {/\.mo$|\.po$/; } sort readdir($dh2) #look at only .mo and .po files
+
                 ]; 
 
 	# insert the anonymous array of theme folder names into ConfigValues
@@ -594,7 +640,7 @@ sub body {
 			$authz->hasPermissions($user, "modify_problem_sets") .
 			" for permission";
 		return(CGI::div({class=>'ResultsWithError'},
-		  CGI::em("You are not authorized to access the Instructor tools.")));
+		  CGI::em($r->maketext("You are not authorized to access the Instructor tools."))));
 	}
 
 	if ($r->param('show_long_doc')) {
@@ -607,9 +653,9 @@ sub body {
 					if($con->{var} eq $r->param('var_name'));
 			}
 		}
-		print CGI::h2("Variable Documentation: ". CGI::code('$'.$r->param('var_name'))),
+		print CGI::h2($r->maketext("Variable Documentation: "). CGI::code('$'.$r->param('var_name'))),
 			CGI::p(),
-			CGI::blockquote( $docstring );
+			CGI::blockquote( $r->maketext($docstring) );
 		return "";
 	}
 
@@ -624,9 +670,7 @@ sub body {
 
 	my $widget_count = 0;
 	if(scalar(@$ConfigValues) == 0) {
-		print CGI::p("The configuration module did not find the data
-it needs to function.  Have your site administrator check that Constants.pm
-is up to date.");
+		print CGI::p($r->maketext("The configuration module did not find the data it needs to function.  Have your site administrator check that Constants.pm is up to date."));
 		return "";
 	}
 
@@ -635,7 +679,7 @@ is up to date.");
 	my @tab_names = map { $_->[0] } @{$ConfigValues};
 	$self->print_navigation_tabs($current_tab, @tab_names);
 
-	print CGI::startform({method=>"post", action=>$r->uri, id=>"config-form", name=>"config-form"});
+	print CGI::start_form({method=>"post", action=>$r->uri, id=>"config-form", name=>"config-form"});
 	print $self->hidden_authen_fields();
 	print CGI::hidden(-name=> 'section_tab', -value=> $current_tab);
 

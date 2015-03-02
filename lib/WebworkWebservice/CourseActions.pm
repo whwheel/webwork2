@@ -11,7 +11,7 @@ use WebworkWebservice;
 use base qw(WebworkWebservice); 
 use WeBWorK::DB;
 use WeBWorK::DB::Utils qw(initializeUserProblem);
-use WeBWorK::Utils qw(runtime_use cryptPassword);
+use WeBWorK::Utils qw(runtime_use cryptPassword formatDateTime parseDateTime);
 use WeBWorK::Utils::CourseManagement qw(addCourse);
 use WeBWorK::Debug;
 use WeBWorK::ContentGenerator::Instructor::SendMail;
@@ -106,6 +106,7 @@ sub listUsers {
     my $out = {};
     my $db = $self->{db};
     my $ce = $self->{ce};
+    
 
     # make sure course actions are enabled
     #if (!$ce->{webservices}{enableCourseActions}) {
@@ -126,24 +127,19 @@ sub listUsers {
     foreach my $u (@userInfo)
     {
         my $PermissionLevel = $db->getPermissionLevel($u->{'user_id'});
-        $u->{'permission'}{'value'} = $PermissionLevel->{'permission'};
-        $u->{'permission'}{'name'} = $permissionsHash{$PermissionLevel->{'permission'}};
-	my $studid= $u->{'student_id'};
-	$u->{'student_id'} = "$studid";  # make sure that the student_id is returned as a string. 
+        $u->{'permission'} = $PermissionLevel->{'permission'};
+        #$u->{'permission'}{'name'} = $permissionsHash{$PermissionLevel->{'permission'}};
+
+
+		my $studid= $u->{'student_id'};
+		$u->{'student_id'} = "$studid";  # make sure that the student_id is returned as a string. 
         $u->{'num_user_sets'} = $db->listUserSets($studid) . "/" . $numGlobalSets;
 	
-	my $Key = $db->getKey($u->{'user_id'});
-	$u->{'login_status'} =  ($Key and time <= $Key->timestamp()+$ce->{sessionKeyTimeout}); # cribbed from check_session
+		my $Key = $db->getKey($u->{'user_id'});
+		$u->{'login_status'} =  ($Key and time <= $Key->timestamp()+$ce->{sessionKeyTimeout}); # cribbed from check_session
 		
     }
 
-    #my %permissionsHash = $ce->{userRoles};
-    #
-    #push(@userInfo, %permissionsHash);
-
-    #foreach $user (@userInfo){
-    #    $user->{permission}
-    #}
 
     $out->{ra_out} = \@userInfo;
     $out->{text} = encode_base64("Users for course: ".$self->{courseName});
@@ -156,9 +152,6 @@ sub addUser {
 	$out->{text} = encode_base64("");
 	my $db = $self->{db};
 	my $ce = $self->{ce};
-	debug("Webservices add user request.");
-	debug("Last Name:" . $params->{'last_name'});
-	debug("First Name:" . $params->{'first_name'});
 
 	# make sure course actions are enabled
 	#if (!$ce->{webservices}{enableCourseActions}) {
@@ -321,10 +314,6 @@ sub deleteUser {
 	#	return $out
 	#}
 	
-	debug($params->{'id'});
-	debug($params->{'user'});
-	debug(($params->{'id'} eq $params->{'user'} ));
-	
 	if ($params->{'id'} eq $params->{'user'} )
 	{
 		$out->{status} = "failure";
@@ -393,8 +382,8 @@ sub editUser {
 
     my %permissionsHash = reverse %{$ce->{userRoles}};
     $PermissionLevel = $db->getPermissionLevel($User->{'user_id'});
-    $User->{'permission'}{'value'} = $PermissionLevel->{'permission'};
-    $User->{'permission'}{'name'} = $permissionsHash{$PermissionLevel->{'permission'}};
+    $User->{'permission'} = $PermissionLevel->{'permission'};
+    #$User->{'permission'}{'name'} = $permissionsHash{$PermissionLevel->{'permission'}};
     
     
     # If the new_password param is set and not equal to the empty string, change the password.
@@ -465,8 +454,6 @@ sub changeUserPassword {
 	$self->{passwordMode} = 0;
 	$out->{text} = encode_base64("New passwords saved");
 	$out->{ra_out}= "password_change: success";
-	debug($out->{text});
-	debug($out->{ra_out});
 	return $out;
 }
 
@@ -538,6 +525,149 @@ sub assignVisibleSets {
 
 	return 0;
 }
+
+
+
+sub getConfigValues {
+	my $ce = shift;
+	my $ConfigValues = $ce->{ConfigValues};
+
+	foreach my $oneConfig (@$ConfigValues) {
+		foreach my $hash (@$oneConfig) {
+			if (ref($hash) eq "HASH"){
+				my $str = '$ce->' . $hash->{hashVar};
+				$hash->{value} = eval($str);
+			} else {
+				debug($hash);
+			}
+		}
+	}
+
+	# get the list of theme folders in the theme directory and remove . and ..
+	my $themeDir = $ce->{webworkDirs}{themes};
+	opendir(my $dh, $themeDir) || die "can't opendir $themeDir: $!";
+	my $themes =[grep {!/^\.{1,2}$/} sort readdir($dh)];
+	
+	# insert the anonymous array of theme folder names into ConfigValues
+	my $modifyThemes = sub { my $item=shift; if (ref($item)=~/HASH/ and $item->{var} eq 'defaultTheme' ) { $item->{values} =$themes } };
+
+	foreach my $oneConfig (@$ConfigValues) {
+		foreach my $hash (@$oneConfig) {
+			&$modifyThemes($hash);
+		}
+	}
+	
+	$ConfigValues;
+}
+
+sub getCourseSettings {
+	my ($self, $params) = @_;
+	my $ce = $self->ce;		# course environment
+	my $db = $self->db;		# database
+	my $ConfigValues = getConfigValues($ce);
+
+	my $tz = DateTime::TimeZone->new( name => $ce->{siteDefaults}->{timezone}); 
+	my $dt = DateTime->now();
+
+	my @tzabbr = ("tz_abbr", $tz->short_name_for_datetime( $dt ));
+
+
+	#debug($tz->short_name_for_datetime($dt));
+
+	push(@$ConfigValues, \@tzabbr);
+  	
+	my $out = {};
+	$out->{ra_out} = $ConfigValues;
+	$out->{text} = encode_base64("Successfully found the course settings");
+    return $out;
+
+}
+
+sub updateSetting {
+	my ($self, $params) = @_;
+	my $ce = $self->ce;		# course environment
+	my $db = $self->db;		# database
+
+	my $setVar = $params->{var};
+	my $setValue = $params->{value};
+
+	# this shouldn't be needed, but it seems like it's not get parsed correctly. 
+	#if($params->{sendViaJSON}){
+	#	$setValue = decode_json($setValue);
+	#}
+	debug("in updateSetting");
+	debug("var:  " . $setVar);
+	debug("value: " . $setValue);
+
+	my $filename = $ce->{courseDirs}->{root} . "/simple.conf";
+	debug("Write to file: " . $filename);
+
+		my $fileoutput = "#!perl
+# This file is automatically generated by WeBWorK's web-based
+# configuration module.  Do not make changes directly to this
+# file.  It will be overwritten the next time configuration
+# changes are saved.\n\n";
+
+
+	# read in the file 
+
+	open(DAT, $filename) || die("Could not open file!");
+	my @raw_data=<DAT>;
+	close(DAT);
+
+
+
+
+	my $var;
+	my $line;
+	my $value;
+	my $varFound = 0; 
+
+	foreach $line (@raw_data)
+	{
+		chomp $line;
+	 	if ($line =~ /^\$/) {
+	 		my @tmp = split(/\$/,$line);
+	 		($var,$value) = split(/\s+=\s+/,$tmp[1]);
+	 		if ($var eq $setVar){ 
+	 			$fileoutput .= "\$" . $var . " = " . $setValue . "\n";
+	 			$varFound = 1; 
+	 		} else {
+	 			$fileoutput .= "\$" . $var . " = " . $value . "\n";
+	 		}
+		}
+	}
+
+	if (! $varFound) {
+		$fileoutput .= "\$" . $setVar . " = " . $setValue . ";\n";
+	}
+
+	debug ($fileoutput);
+
+
+	my $writeFileErrors;
+	eval {                                                          
+		local *OUTPUTFILE;
+		if( open OUTPUTFILE, ">", $filename) {
+			print OUTPUTFILE $fileoutput;
+			close OUTPUTFILE;
+		} else {
+			$writeFileErrors = "I could not open $fileoutput".
+				"We will not be able to make configuration changes unless the permissions are set so that the web server can write to this file.";
+		}
+	};  # any errors are caught in the next block
+
+	$writeFileErrors = $@ if $@;
+
+	debug("errors: ". $writeFileErrors);
+
+
+	my $out = {};
+	$out->{ra_out} = "";
+	$out->{text} = encode_base64("Successfully updated the course settings");
+    return $out;
+}
+
 
 ##  pstaabp: This is currently not working.  We need to look into a nice robust way to send email.  It looks like the current
 ## way that WW sends mail is a bit archaic.  The MIME::Lite looks fairly straightforward, but we may need to look into smtp settings a

@@ -99,7 +99,7 @@ sub get_credentials {
 		} else {
 			debug("Couldn't shib header or user_id");
 			my $q = new CGI;
-			my $go_to = $ce->{shibboleth}{login_script}."?target=".$q->url();
+			my $go_to = $ce->{shibboleth}{login_script}."?target=".$q->url(-path=>1);
 			$self->{redirect} = $go_to;
 			print $q->redirect($go_to);
 			return 0;
@@ -119,7 +119,7 @@ sub get_credentials {
 sub site_checkPassword { 
 	my ( $self, $userID, $clearTextPassword ) = @_;
 
-	if ( $self->{r}->ce->{shiboff} ) {
+	if ( $self->{r}->ce->{shiboff}  || $self->{r}->param('bypassShib') ) {
 		return $self->SUPER::checkPassword( @_ );
 	} else {
 		# this is easy; if we're here at all, we've authenticated

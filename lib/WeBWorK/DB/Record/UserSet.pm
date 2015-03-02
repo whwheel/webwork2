@@ -36,9 +36,13 @@ BEGIN {
 		open_date                 => { type=>"BIGINT" },
 		due_date                  => { type=>"BIGINT" },
 		answer_date               => { type=>"BIGINT" },
+		reduced_scoring_date       => { type=>"BIGINT" },	    
 		visible                   => { type=>"INT" },
 		enable_reduced_scoring    => { type=>"INT" },
 		assignment_type           => { type=>"TEXT" },
+	    description               => { type=>"TEXT" },
+		restricted_release	      => { type=>"TEXT" },
+		restricted_status	      => { type=>"FLOAT" },
 		attempts_per_version      => { type=>"INT" },
 		time_interval             => { type=>"INT" },
 		versions_per_interval     => { type=>"INT" },
@@ -54,6 +58,7 @@ BEGIN {
 		restrict_ip               => { type=>"ENUM('No','RestrictTo','DenyFrom')" },
 		relax_restrict_ip         => { type=>"ENUM('No','AfterAnswerDate','AfterVersionAnswerDate')" },
 		restricted_login_proctor  => { type=>"ENUM('No','Yes')" },
+		hide_hint                 => { type=>"INT" },
 	);
 }
 

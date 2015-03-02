@@ -1,7 +1,7 @@
 
 #
 msgid "_REDUCED_CREDIT_MESSAGE_1"
-msgstr "tr: This assignment has a Reduced Credit Period that begins %1 and ends on the due date, %2.  During this period all additional work done counts %3\% of the original."
+msgstr "This assignment has a Reduced Scoring Period that begins %1 and ends on the due date, %2.  During this period all additional work done counts %3\% of the original."
 
 #
 msgid "_REQUEST_ERROR"
@@ -11,13 +11,16 @@ msgstr "WeBWorK has encountered a software error while attempting to process thi
 msgid "_HMWKSETS_EDITOR_DESCRIPTION"
 msgstr "This is the homework sets editor page where you can view and edit the homework sets that exist in this course and the problems that they contain. The top of the page contains forms which allow you to filter which sets to display in the table, sort the sets in a chosen order, edit homework sets, publish homework sets, import/export sets from/to an external file, score sets, or create/delete sets.  To use, please select the action you would like to perform, enter in the relevant information in the fields below, and hit the \"Take Action!\" button at the bottom of the form.  The bottom of the page contains a table displaying the sets and several pieces of relevant information."
 
+msgid "_ANSWER_LOG_DESCRIPTION"
+msgstr "This is the past answer viewer.  Students can only see their answers, and they will not be able to see which parts are correct.  Instructors can view any users answers using the form below and the answers will be colored according to correctness.  You can use *, ? or | as wildcards in the user field or set field and you can use number ranges in the problem field."
+
 #
 msgid "_EXTERNAL_AUTH_MESSAGE"
 msgstr "%1 uses an external authentication system.  You've authenticated through that system, but aren't allowed to log in to this course."
 
 #
 msgid "navProbList"
-msgstr "Up"
+msgstr "Problem List"
 
 #
 msgid "navNext"
@@ -29,11 +32,11 @@ msgstr "1"
 
 #
 msgid "navPrevGrey"
-msgstr "Prev"
+msgstr "Previous"
 
 #
 msgid "navProbListGrey"
-msgstr "tr: Up"
+msgstr "Problem List"
 
 #
 msgid "navNextGrey"
@@ -41,11 +44,15 @@ msgstr "Next"
 
 #
 msgid "_CLASSLIST_EDITOR_DESCRIPTION"
-msgstr "tr: This is the classlist editor page, where you can view and edit the records of all the studentscurrently enrolled in this course.  The top of the page contains forms which allow you to filterwhich students to view, sort your students in a chosen order, edit student records, give new passwords to students, import/export student records from/to external files, or add/delete students. To use, please select the action you would like to perform, enter in the relevant information in the fields below, and hit the \"Take Action!\" button at the bottom of the form.  The bottom of the page contains a table containing the student usernames and their information."
+msgstr "This is the classlist editor page, where you can view and edit the records of all the studentscurrently enrolled in this course.  The top of the page contains forms which allow you to filterwhich students to view, sort your students in a chosen order, edit student records, give new passwords to students, import/export student records from/to external files, or add/delete students. To use, please select the action you would like to perform, enter in the relevant information in the fields below, and hit the \"Take Action!\" button at the bottom of the form.  The bottom of the page contains a table containing the student usernames and their information."
 
 #
 msgid "_REDUCED_CREDIT_MESSAGE_2"
-msgstr "tr: This assignment had a Reduced Credit Period that began %1 and ended on the due date, %2.  During that period all additional work done counted %3\% of the original."
+<<<<<<< HEAD
+msgstr "This assignment had a Reduced Scoring Period that began %1 and ended on the due date, %2.  During that period all additional work done counted %3\% of the original."
+=======
+msgstr "This assignment had a Reduced Credit Period that began %1 and ended on the due date, %2.  During that period all additional work done counted %3\% of the original."
+>>>>>>> release/2.9
 
 #
 msgid "_LOGIN_MESSAGE"
@@ -53,12 +60,12 @@ msgstr "If you check %1 your login information will be remembered by the browser
 
 #
 msgid "navUp"
-msgstr "Up"
+msgstr "Homework Sets"
 
 #
 msgid "navPrev"
-msgstr "Prev"
+msgstr "Previous"
 
 #
 msgid "_GUEST_LOGIN_MESSAGE"
-msgstr "tr: This course supports guest logins. Click %1 to log into this course as a guest."
+msgstr "This course supports guest logins. Click %1 to log into this course as a guest."

@@ -126,6 +126,7 @@ sub _create_table_stmt {
 	my ($self) = @_;
 	
 	my $sql_table_name = $self->sql_table_name;
+  my $engine = $self->engine;
 	
 	my @field_list;
 	
@@ -161,7 +162,7 @@ sub _create_table_stmt {
 	}
 	
 	my $field_string = join(", ", @field_list);
-	return "CREATE TABLE `$sql_table_name` ( $field_string )";
+	return "CREATE TABLE `$sql_table_name` ( $field_string ) ENGINE=$engine";
 }
 
 ################################################################################
@@ -774,6 +775,13 @@ sub sql_table_name {
 		: $self->table;
 }
 
+sub engine {
+  my ($self) = @_;
+  return defined $self->{engine}
+    ? $self->{engine}
+    : 'MYISAM';
+}
+
 # returns non-quoted SQL name of given field
 sub sql_field_name {
 	my ($self, $field) = @_;
@@ -807,13 +815,15 @@ our %MYSQL_ERROR_CODES = (
 # another RDBMS.
 sub handle_error {
 	my ($errmsg, $handle, $returned) = @_;
-	
 	if (exists $MYSQL_ERROR_CODES{$handle->err}) {
 		$MYSQL_ERROR_CODES{$handle->err}->throw;
 	} else {
-	    my $error = $errmsg."\n".join("\n",caller(1),caller(2),caller(3));
-	    #$error =~ s|\n|<br/>|;
-		die $error ;
+
+	    if ($errmsg =~ /Unknown column/) {
+		warn("It looks like the database is missing a column.  You may need to upgrade your course tables.  If this is the admin course then you will need to upgrade the admin tables using the upgrade_admin_db.pl script.");
+	    }
+	    
+	    die $errmsg ;
 	}
 }
 

@@ -29,6 +29,12 @@
 	clear:both;
 	border: none; /* 1px solid grey; */
 }
+
+a.table-summary,
+a.table-summary:visited {
+    color:black;
+    text-decoration:none;
+}
 .table-input {
 	width:15em;
     font-size:75%;
@@ -53,6 +59,37 @@ h6 { font-size: 105%; }
 
 a:link { color: #00e; background-color: inherit; }
 a:visited { color: #808; background-color: inherit; }
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+.sr-only-focusable:active,
+.sr-only-focusable:focus {
+  position: static;
+  width: auto;
+  height: auto;
+  margin: 0;
+  overflow: visible;
+  clip: auto;
+}
+.sr-only-glyphicon {
+ position: absolute;
+ width: 1em;
+ height: 1em;
+ padding: 0;
+ margin: 0;
+ margin-left: -1em;
+ overflow: hidden;
+ clip: rect(0px, 0px, 0px, 0px);
+ border: 0 none;
+}
 
 /* --- Miscellaneous classes ---------------------------------------------- */
 
@@ -171,6 +208,14 @@ h2.compound { float: right; margin: 0; padding: 0 }*/
 background-color:#ddd;
 clear: both;
 }
+
+.admin-messagebox {
+    background-color:#FFFFCC;
+    width:60%;
+    padding: 10px;
+    text-align:center;
+}
+
 /* --- Fisheye view (id) ---------------------------------------------------- */
 
 /* The "fisheye" view: a hierarchical view of the website to show the 
@@ -309,7 +354,7 @@ clear: both;
 } 
 
 #mainform i.icon-random {
-    cursor: hand;
+    cursor: pointer;
 }
 
 /*Relative Positioning -- a alternate style for the loginstatus which uses relative positioning.  Tested, but was decided that it didn't work great. Feel free to uncomment if you want to try it out.*/
@@ -415,6 +460,14 @@ clear: both;
 }
 #content h1 { margin: .4ex 0; } /* for crappy MSIE */
 
+/* Library Browser*/
+.library-browser-table td {
+	padding-top: 0.2em;
+	padding-bottom: 0.2em;
+}
+.library-browser-table .table-separator {
+	border-bottom: 1px solid #ccc;
+}
 
 #footer {
 	/* white-space: nowrap; */
@@ -448,22 +501,26 @@ clear: both;
  * it is emitted by WW code in ProblemSet.pl (not in system.template) ! */
 #InfoPanel {
     font-size:100%;
-    float: left; /*was right*/
-    min-width: 0;
-    overflow: hidden; /*was auto*/
-    /*margin-right: -1px;*/
-    background-color: #fff;
+
+
+	float: left; /*was right*/
+	min-width: 0;
+	overflow: auto; /*was hidden*/
+	/*margin-right: -1px;*/
+	background-color: #fff;
+
 }
 #InfoPanel ol {
 	font-size:100%;
 }
 
-#problem-content {
+.problem-content {
   margin-left:auto;
   margin-right:auto;
   border: 2px solid black;
   padding: 10px;
 }
+
 /* tables used for laying out form fields shouldn't have a border */
 table.FormLayout { border: 0; }
 table.FormLayout tr { vertical-align: top; }
@@ -484,6 +541,7 @@ div.WarningMessage { background-color: #FF9494; padding: 3px 3px 3px 3px; }
 div.ResultsWithoutError { color: inherit; background-color: #8F8; } /* green */
 div.ResultsWithError { color: #FF9494; background-color: inherit; } /* error red, from http://www.colourlovers.com/color/FF9494/error_red*/
 div.ResultsAlert { color: #F60; background-color: inherit; } /* orange */
+div.showMeAnotherBox { background-color: #EDE275; border-radius: 5px; border: 2px solid #FDD017; padding: 3px 3px 3px 3px} /* bright gold border and harvest gold background*/
 label.WarningMessage { background-color: #FF9494; padding: 3px 3px 3px 3px; }
 label.ResultsWithoutError { color: inherit; background-color: #8F8; } /* green */
 label.ResultsWithError { color: #FF9494; background-color: inherit; } /* error red, from http://www.colourlovers.com/color/FF9494/error_red*/
@@ -574,11 +632,14 @@ div.NoFontMessage {
 }
 
 /* text colors for visible and hidden sets */
+
 font.visible   { font-style: normal; font-weight: normal; color: #000000; background-color: inherit; display:inline-table; visibility: visible; } /* black */
 font.hidden { font-style: italic; font-weight: normal; color: #aaaaaa; background-color: inherit; display:inline-table; visibility: visible;} /* light grey */
 table font {font-size:75%}
 table a {font-size:75%}
 table th {font-size:75%}
+
+
 /* styles used when editing a temporary file */
 .temporaryFile { font-style: italic; color: #F60; background-color: inherit; }
 
@@ -626,21 +687,40 @@ table th {font-size:75%}
 	display: none;
 }
 
+/*styles for the past answer page */
+.past-answer-table td {
+    white-space: nowrap;
+    min-width: 20px;
+}
+
+.past-answer-table .table-rule {
+    border-bottom: 1px solid #d5d5d5;
+    padding-bottom: 5px;
+}
+.past-answer-table .essay,
+.past-answer-table .comment {
+    min-width: 400px;
+    white-space: normal;
+}
+
 /*Styles for the classlist editor page*/
 
 /*The styles here correctly align the table elements in the set table*/
 .set_table{
 	margin-right: 5px;
+	border: 1px solid black;
 }
 
 .set_table td{
 	padding-right: 5px;
+	border: 1px solid black;
 }
 
 .set_table th{
 	text-align: center;
 	padding-right: 5px;
 	padding-left: 5px;
+	border: 1px solid black;
 }
 
 .set_table label{
@@ -829,8 +909,8 @@ span.gray_button{
 
 #pg_editor_frame_id{
     width:95%;
-    height:390px;
-    overflow:hidden;
+    height:590px;
+    overflow:scroll;
 }
 
 #render-modal.modal {
@@ -841,6 +921,7 @@ span.gray_button{
 #render-modal .modal-body {
     height:95%;
     width:95%;
+    max-height:600px;
 }
 
 /*These are styles for the table of problem sets, found on the Homework Sets page.  Most are simple alignment changes which makes it so everything isn't bunched up together.*/
@@ -886,6 +967,7 @@ div.problem_sets_options {
 /*This is the styling specifically for the tables of problems displayed for each problem set page*/
 table.problem_set_table{
 	margin-top: 30px;
+	margin-bottom: 20px;
 	#width: 640px;
 	text-align: left;
 	float: left;
@@ -895,6 +977,14 @@ table.problem_set_table th{
 }
 table.problem_set_table td{
 	padding-right: 30px;
+/*	text-align:center; */
+}
+table.problem_set_table a{
+    font-size:100%;
+}
+table.problem_set_table .icon-download {
+    font-size:1.2em;
+    text-decoration:none;
 }
 div.problem_set_options {
 	clear: both;
@@ -904,3 +994,26 @@ div.problem_set_options {
 table#grades_table pre{
 	float: left;
 }
+
+table#grades_table {
+    border:1px solid black;
+    border-collapse: collapse;
+}
+
+table#grades_table th {
+    text-align:center;
+    border: 1px solid black;
+}
+
+table#grades_table td {
+    border: 1px solid black;
+    padding: 2px;
+    min-width: 20px;
+    text-align:center;
+}
+
+span.required-field {
+    color:red;
+    margin-left: 0px;
+}
+

@@ -33,18 +33,19 @@ use WeBWorK::Utils::Tasks qw(renderProblems);
 use WeBWorK::Debug;
 # IP RESTRICT
 use WeBWorK::HTML::ScrollingRecordList qw/scrollingRecordList/;
+use WeBWorK::Utils::DatePickerScripts;
 
 # Important Note: the following two sets of constants may seem similar 
 # 	but they are functionally and semantically different
 
 # these constants determine which fields belong to what type of record
-use constant SET_FIELDS => [qw(set_header hardcopy_header open_date due_date answer_date visible enable_reduced_scoring restrict_ip relax_restrict_ip assignment_type attempts_per_version version_time_limit time_limit_cap versions_per_interval time_interval problem_randorder problems_per_page hide_score:hide_score_by_problem hide_work)];
-use constant PROBLEM_FIELDS =>[qw(source_file value max_attempts)];
+use constant SET_FIELDS => [qw(set_header hardcopy_header open_date due_date answer_date visible description enable_reduced_scoring reduced_scoring_date restricted_release restricted_status restrict_ip relax_restrict_ip assignment_type attempts_per_version version_time_limit time_limit_cap versions_per_interval time_interval problem_randorder problems_per_page hide_score:hide_score_by_problem hide_work hide_hint)];
+use constant PROBLEM_FIELDS =>[qw(source_file value max_attempts showMeAnother)];
 use constant USER_PROBLEM_FIELDS => [qw(problem_seed status num_correct num_incorrect)];
 
 # these constants determine what order those fields should be displayed in
 use constant HEADER_ORDER => [qw(set_header hardcopy_header)];
-use constant PROBLEM_FIELD_ORDER => [qw(problem_seed status value max_attempts attempted last_answer num_correct num_incorrect)];
+use constant PROBLEM_FIELD_ORDER => [qw(problem_seed status value max_attempts showMeAnother attempted last_answer num_correct num_incorrect)];
 # for gateway sets, we don't want to allow users to change max_attempts on a per
 #    problem basis, as that's nothing but confusing.
 use constant GATEWAY_PROBLEM_FIELD_ORDER => [qw(problem_seed status value attempted last_answer num_correct num_incorrect)];
@@ -56,7 +57,7 @@ use constant GATEWAY_PROBLEM_FIELD_ORDER => [qw(problem_seed status value attemp
 # FIXME: in the long run, we may want to let hide_score and hide_work be
 # FIXME: set for non-gateway assignments.  right now (11/30/06) they are
 # FIXME: only used for gateways
-use constant SET_FIELD_ORDER => [qw(open_date due_date answer_date visible enable_reduced_scoring restrict_ip relax_restrict_ip assignment_type)];
+use constant SET_FIELD_ORDER => [qw(open_date due_date answer_date visible enable_reduced_scoring reduced_scoring_date restricted_release restricted_status restrict_ip relax_restrict_ip hide_hint assignment_type)];
 # use constant GATEWAY_SET_FIELD_ORDER => [qw(attempts_per_version version_time_limit time_interval versions_per_interval problem_randorder problems_per_page hide_score hide_work)];
 use constant GATEWAY_SET_FIELD_ORDER => [qw(version_time_limit time_limit_cap attempts_per_version time_interval versions_per_interval problem_randorder problems_per_page hide_score:hide_score_by_problem hide_work)];
 
@@ -98,10 +99,16 @@ use constant FIELD_PROPERTIES => {
 		module    => "hardcopy_preselect_set",
 		default   => "",		
 	},
+	description => {
+		name      => "Description",
+		type      => "edit",
+		override  => "all",
+		default   => "",
+	},
 	open_date => {
 		name      => "Opens",
 		type      => "edit",
-		size      => "30em",
+		size      => "30",
 		override  => "any",
 		labels    => {
 				#0 => "None Specified",
@@ -111,7 +118,7 @@ use constant FIELD_PROPERTIES => {
 	due_date => {
 		name      => "Answers Due",
 		type      => "edit",
-		size      => "30em",
+		size      => "30",
 		override  => "any",
 		labels    => {
 				#0 => "None Specified",
@@ -121,7 +128,7 @@ use constant FIELD_PROPERTIES => {
 	answer_date => {
 		name      => "Answers Available",
 		type      => "edit",
-		size      => "30em",
+		size      => "30",
 		override  => "any",
 		labels    => {
 				#0 => "None Specified",
@@ -139,13 +146,51 @@ use constant FIELD_PROPERTIES => {
 		},
 	},
 	enable_reduced_scoring => {
-		name      => "Reduced Credit Enabled",
+		name      => "Reduced Scoring Enabled",
 		type      => "choose",
 		override  => "all",
 		choices   => [qw( 0 1 )],
 		labels    => {
 				1 => "Yes",
 				0 => "No",
+		},
+	},
+	reduced_scoring_date => {
+		name      => "Reduced Scoring Date",
+		type      => "edit",
+		size      => "30",
+		override  => "any",
+		labels    => {
+				#0 => "None Specified",
+				"" => "None Specified",
+		},
+	},
+	restricted_release => {
+		name      => "Restrict release by set(s)",
+		type      => "edit",
+		size      => "30",
+		override  => "any",
+		labels    => {
+				#0 => "None Specified",
+				"" => "None Specified",
+
+		},
+	},
+	restricted_status => {
+		name      => "Score required for release",
+		type      => "choose",
+		override  => "any",
+		choices   => [qw( 1 0.9 0.8 0.7 0.6 0.5 0.4 0.3 0.2 0.1 )],
+		labels    => {	'0.1' => '10%',
+				'0.2' => '20%',
+				'0.3' => '30%',
+				'0.4' => '40%',
+				'0.5' => '50%',
+				'0.6' => '60%',
+				'0.7' => '70%',
+				'0.8' => '80%',
+				'0.9' => '90%',
+				'1' => '100%',
 		},
 	},
 	restrict_ip => {
@@ -183,10 +228,11 @@ use constant FIELD_PROPERTIES => {
 		},
 	},
 	version_time_limit => {
-		name      => "Test Time Limit (min)",
+		name      => "Test Time Limit (min; 0=Due Date)",
 		type      => "edit",
 		size      => "4",
 		override  => "any",
+		default   => "0",
 #		labels    => {	"" => 0 },  # I'm not sure this is quite right
 		convertby => 60,
 	},
@@ -198,10 +244,11 @@ use constant FIELD_PROPERTIES => {
 		labels    => { '0' => 'No', '1' => 'Yes' },
 	},
 	attempts_per_version => {
-		name      => "Number of Graded Submissions per Test",
+		name      => "Number of Graded Submissions per Test (0=infty)",
 		type      => "edit",
 		size      => "3",
 		override  => "any",
+		default   => "0",
 #		labels    => {	"" => 1 },
 	},
 	time_interval => {
@@ -209,6 +256,7 @@ use constant FIELD_PROPERTIES => {
 		type      => "edit",
                 size      => "5",
 		override  => "any",
+		default   => "0",
 #		labels    => {	"" => 0 },
 		convertby => 60,
 	},
@@ -245,7 +293,7 @@ use constant FIELD_PROPERTIES => {
 		labels    => { 'N:' => 'Yes', 'Y:N' => 'No', 'BeforeAnswerDate:N' => 'Only after set answer date', 'Y:Y' => 'Totals only (not problem scores)', 'BeforeAnswerDate:Y' => 'Totals only, only after answer date' },
 	},
 	hide_work         => {
-		name      => "Show Student Work on Finished Tests",
+		name      => "Show Problems on Finished Tests",
 		type      => "choose",
 		choices   => [ qw(N Y BeforeAnswerDate) ],
 		override  => "any",
@@ -273,7 +321,7 @@ use constant FIELD_PROPERTIES => {
                 default => "1",
 	},
 	max_attempts => {
-		name      => "Max&nbsp;attempts",
+		name      => "Max attempts",
 		type      => "edit",
 		size      => 6,
 		override  => "any",
@@ -282,6 +330,16 @@ use constant FIELD_PROPERTIES => {
 				"-1" => "unlimited",
 		},
 	},
+        showMeAnother => {
+                name => "Show me another",
+                type => "edit",
+                size => "6",
+		override  => "any",
+                default=>"-1",
+		labels    => {
+				"-1" => "Never",
+		},
+        },
 	problem_seed => {
 		name      => "Seed",
 		type      => "edit",
@@ -323,7 +381,18 @@ use constant FIELD_PROPERTIES => {
 		type      => "hidden",
 		override  => "none",
 		default   => "0",
-	},	
+	},
+	hide_hint => {
+		name      => "Hide Hints from Students",
+		type      => "choose",
+		override  => "any",
+		choices   => [qw( 0 1 )],
+		labels    => {
+				1 => "Yes",
+				0 => "No",
+		},
+	},
+	
 };
 
 use constant FIELD_PROPERTIES_GWQUIZ => {
@@ -340,6 +409,7 @@ sub FieldTable {
 	my ($self, $userID, $setID, $problemID, $globalRecord, $userRecord, $isGWset) = @_;
 
 	my $r = $self->r;	
+	my $ce = $r->ce;
 	my @editForUser = $r->param('editForUser');
 	my $forUsers    = scalar(@editForUser);
 	my $forOneUser  = $forUsers == 1;
@@ -362,6 +432,7 @@ sub FieldTable {
 	# needed for set-level proctor
 	my $procFields = '';
 
+
 	if (defined $problemID) {
 		@fieldOrder = ($isGWset) ? @{ GATEWAY_PROBLEM_FIELD_ORDER() } :
 			@{ PROBLEM_FIELD_ORDER() };
@@ -371,7 +442,8 @@ sub FieldTable {
 		($gwFields, $ipFields, $numLocations, $procFields) = $self->extraSetFields($userID, $setID, $globalRecord, $userRecord, $forUsers);
 	}
 
-	my $output = CGI::start_table({border => 0, cellpadding => 1});
+
+       	my $output = CGI::start_table({border => 0, cellpadding => 1});
 	if ($forUsers) {
 		$output .= CGI::Tr({},
 		    CGI::th({colspan=>"2"}, "&nbsp;"),
@@ -389,7 +461,22 @@ sub FieldTable {
 		else{
 			%properties = %{ FIELD_PROPERTIES()->{$field} };
 		}
+
+		#Don't show fields if that option isn't enabled.  
+		if (!$ce->{options}{enableConditionalRelease} && 
+		    ($field eq 'restricted_release' || $field eq 'restricted_status')) {
+			$properties{'type'} = 'hidden';
+		    }
 		
+		if (!$ce->{pg}{ansEvalDefaults}{enableReducedScoring} &&
+		    ($field eq 'reduced_scoring_date' || $field eq 'enable_reduced_scoring')) {
+			$properties{'type'} = 'hidden';
+		} elsif ($ce->{pg}{ansEvalDefaults}{enableReducedScoring} &&
+		    $field eq 'reduced_scoring_date' && !$globalRecord->reduced_scoring_date) {
+		    $globalRecord->reduced_scoring_date($globalRecord->due_date -
+			60*$ce->{pg}{ansEvalDefaults}{reducedScoringPeriod});
+		}
+
 		# we don't show the ip restriction option if there are 
 		#    no defined locations, nor the relax_restrict_ip option
 		#    if we're not restricting ip access
@@ -405,9 +492,13 @@ sub FieldTable {
 		next if ( $field eq 'problem_seed'  &&
 			  ( $isGWset && $forUsers && ! $setVersion ) );
 
+                # skip the Show Me Another value if SMA is not enabled
+	        next if ( $field eq 'showMeAnother' &&
+                          !$ce->{pg}->{options}->{enableShowMeAnother} );
+
 		unless ($properties{type} eq "hidden") {
 			$output .= CGI::Tr({}, CGI::td({}, [$self->FieldHTML($userID, $setID, $problemID, $globalRecord, $userRecord, $field)])) . "\n";
-	}
+		}
 
 		# finally, put in extra fields that are exceptions to the 
 		#    usual display mechanism
@@ -530,12 +621,14 @@ sub FieldHTML {
 	# $inputType contains either an input box or a popup_menu for changing a given db field
 	my $inputType = "";
 	if ($edit) {
-		$inputType = CGI::font({class=>"visible"}, CGI::input({
+		$inputType = CGI::input({
+		                type => "text",
 				name => "$recordType.$recordID.$field",
 				id   => "$recordType.$recordID.${field}_id",
 				value => $r->param("$recordType.$recordID.$field") || ($forUsers ? $userValue : $globalValue),
 				size => $properties{size} || 5,
-		}));
+					});
+
 	} elsif ($choose) {
 		# Note that in popup menus, you're almost guaranteed to have the choices hashed to labels in %properties
 		# but $userValue and and $globalValue are the values in the hash not the keys
@@ -909,28 +1002,43 @@ sub initialize {
 	# Check date information
 	#####################################################################
 
-	my ($open_date, $due_date, $answer_date);
-	my $error = 0;
+	my ($open_date, $due_date, $answer_date, $reduced_scoring_date);
+	my $error = 0;	
 	if (defined $r->param('submit_changes')) {
-		my @names = ("open_date", "due_date", "answer_date");
-		
-		my %dates = map { $_ => $r->param("set.$setID.$_") } @names;
+		my @names = ("open_date", "due_date", "answer_date", "reduced_scoring_date");
+
+		my %dates = map { $_ => $r->param("set.$setID.$_") || ''} @names;
+
 		%dates = map { 
 			my $unlabel = $undoLabels{$_}->{$dates{$_}}; 
-			$_ => defined $unlabel ? $setRecord->$_ : $self->parseDateTime($dates{$_}) 
+			$_ => (defined($unlabel) || !$dates{$_}) ? $setRecord->$_ : $self->parseDateTime($dates{$_}) 
 		} @names;
 
-		($open_date, $due_date, $answer_date) = map { $dates{$_}||0 } @names;
-        
-        # make sure dates are numeric by using ||0
+		($open_date, $due_date, $answer_date, $reduced_scoring_date) = map { $dates{$_}||0 } @names;
+		
+		# make sure dates are numeric by using ||0
         
 		if ($answer_date < $due_date || $answer_date < $open_date) {		
 			$self->addbadmessage($r->maketext("Answers cannot be made available until on or after the due date!"));
 			$error = $r->param('submit_changes');
 		}
 		
-		if ($due_date < $open_date) {
+		if ($due_date < $open_date ) {
 			$self->addbadmessage($r->maketext("Answers cannot be due until on or after the open date!"));
+			$error = $r->param('submit_changes');
+		}
+
+		my $enable_reduced_scoring = 
+		    $ce->{pg}{ansEvalDefaults}{enableReducedScoring} && 
+		    defined($r->param("set.$setID.enable_reduced_scoring")) ? 
+		    $r->param("set.$setID.enable_reduced_scoring") : 
+		    $setRecord->enable_reduced_scoring;
+
+		if ($enable_reduced_scoring && 
+		    $reduced_scoring_date 
+		    && ($reduced_scoring_date > $due_date 
+			|| $reduced_scoring_date < $open_date)) {
+			$self->addbadmessage($r->maketext("The reduced scoring date should be between the open date and due date."));
 			$error = $r->param('submit_changes');
 		}
 		
@@ -950,10 +1058,6 @@ sub initialize {
 			$self->addbadmessage($r->maketext("Error: answer date cannot be more than 10 years from now in set [_1]", $setID));
 			$error = $r->param('submit_changes');
 		}
-			# grab short name for timezone
-			# used to set proper timezone name in datepicker
-
-			$self->{timezone_shortname} = substr($due_date, -3); #this is fragile
 
 	}
 	
@@ -1000,12 +1104,13 @@ sub initialize {
 
 					    my $param = $r->param("set.$setID.$field");
 					    $param = defined $properties{$field}->{default} ? $properties{$field}->{default} : "" unless defined $param && $param ne "";
+
 					    my $unlabel = $undoLabels{$field}->{$param};
 						$param = $unlabel if defined $unlabel;
 #						$param = $undoLabels{$field}->{$param} || $param;
-						if ($field =~ /_date/) {
+						if ($field =~ /_date/ ) {
 							$param = $self->parseDateTime($param) unless defined $unlabel;
-						}
+						} 					    
 						if (defined($properties{$field}->{convertby}) && $properties{$field}->{convertby}) {
 							$param = $param*$properties{$field}->{convertby};
 						}
@@ -1109,8 +1214,11 @@ sub initialize {
 				$param = defined $properties{$field}->{default} ? $properties{$field}->{default} : "" unless defined $param && $param ne "";
 				my $unlabel = $undoLabels{$field}->{$param};
 				$param = $unlabel if defined $unlabel;
-				if ($field =~ /_date/) {
-					$param = $self->parseDateTime($param) unless defined $unlabel;
+				if ($field =~ /_date/ ) {
+				    $param = $self->parseDateTime($param) unless (defined $unlabel || !$param);
+				} 
+				if ($field =~ /restricted_release/) {
+				    $self->check_sets($db,$param) if $param;
 				}
 				if (defined($properties{$field}->{convertby}) && $properties{$field}->{convertby} && $param) {
 					$param = $param*$properties{$field}->{convertby};
@@ -1498,9 +1606,6 @@ sub initialize {
 		}
 	}	
 	
-
-
-
 	# This erases any sticky fields if the user saves changes, resets the form, or reorders problems
 	# It may not be obvious why this is necessary when saving changes or reordering problems
 	# 	but when the problems are reorder the param problem.1.source_file needs to be the source
@@ -1587,9 +1692,13 @@ sub checkFile ($) {
 	return $r->maketext("This source file is not a plain file!");
 }
 
-# don't show view options -- we provide display mode controls for headers/problems separately
-sub options {
-	return "";
+#Make sure restrictor sets exist
+sub check_sets {
+	my ($self,$db,$sets_string) = @_;
+	my @proposed_sets = split(/\s*,\s*/,$sets_string);
+	foreach(@proposed_sets) {
+	  $self->addbadmessage("Error: $_ is not a valid set name in restricted release list!") unless $db->existsGlobalSet($_);
+	}
 }
 
 # Creates two separate tables, first of the headers, and the of the problems in a given set
@@ -1756,7 +1865,7 @@ sub body {
 	}
 	
 	# handle renumbering of problems if necessary
- 	print CGI::a({name=>"problems"});
+	print CGI::a({name=>"problems"}, "");
 
 	my %newProblemNumbers = ();
 	my $maxProblemNumber = -1;
@@ -1835,9 +1944,38 @@ sub body {
 
 	print CGI::end_table();	
 
-	# spacing
-	print CGI::p();
+	#datepicker scripts.  
+	# we try to provide the date picker scripts with the global set
+	# if we aren't looking at a specific students set and the merged
+	# one otherwise. 
+	if ($ce->{options}->{useDateTimePicker}) {
+	    my $tempSet; 
+	    if ($forUsers) {
+		$tempSet = $db->getMergedSet($userToShow, $setID); 
+	    } else {
+		$tempSet = $setRecord;
+	    }
+	    
+	    print CGI::start_script({-type=>"text/javascript"}),"\n";
+	    print q!$(".ui-datepicker").draggable();!,"\n";
+	    print WeBWorK::Utils::DatePickerScripts::date_scripts($ce, $tempSet),"\n";	
+	    print CGI::end_script();
+	}
 
+	# spacing
+	print CGI::start_p();
+
+	####################################################################
+	# Display Field for putting in a set description
+	####################################################################
+	print CGI::h5($r->maketext("Set Description"));
+	print CGI::textarea({name=>"set.$setID.description",
+			     id=>"set.$setID.description",
+			     value=>$setRecord->description(),
+			     rows=>5,
+			     cols=>62,});
+
+	print CGI::end_p();
 	
 	#####################################################################
 	# Display header information
@@ -1851,8 +1989,8 @@ sub body {
 		print CGI::start_table({border=>1, cellpadding=>4});
 		print CGI::Tr({}, CGI::th({}, [
 			$r->maketext("Headers"),
-#			"Data",
-			"Display&nbsp;Mode:&nbsp;" . 
+#			$r->maketext("Data"),
+			$r->maketext("Display Mode:") . 
 			CGI::popup_menu(-name => "header.displaymode", -values => \@active_modes, -default => $default_header_mode) . '&nbsp;'. 
 			CGI::input({type => "submit", name => "refresh", value => $r->maketext("Refresh Display")}),
 		]));
@@ -1894,7 +2032,7 @@ sub body {
 		
 		foreach my $headerType (@headers) {
 	
-			my $editHeaderPage = $urlpath->new(type => 'instructor_problem_editor_withset_withproblem', args => { courseID => $courseID, setID => $setID, problemID => 0 });
+			my $editHeaderPage = $urlpath->new(type => 'instructor_problem_editor2_withset_withproblem', args => { courseID => $courseID, setID => $setID, problemID => 0 });
 			my $editHeaderLink = $self->systemLink($editHeaderPage, params => { file_type => $headerType, make_local_copy => 1 });
 
 			my $viewHeaderPage = $urlpath->new(type => $headerModules{$headerType}, args => { courseID => $courseID, setID => $setID });	
@@ -1914,7 +2052,7 @@ sub body {
 
 			print CGI::Tr({}, CGI::td({}, [
 				CGI::start_table({border => 0, cellpadding => 0}) . 
-					CGI::Tr({}, CGI::td({}, $properties{$headerType}->{name})) . 
+					CGI::Tr({}, CGI::td({}, $r->maketext($properties{$headerType}->{name}))) . 
 					CGI::Tr({}, CGI::td({}, CGI::a({href => $editHeaderLink, target=>"WW_Editor"}, $r->maketext("Edit it")))) .
 					CGI::Tr({}, CGI::td({}, CGI::a({href => $viewHeaderLink, target=>"WW_View"}, $r->maketext("View it")))) .
 				CGI::end_table(),
@@ -1977,7 +2115,7 @@ sub body {
 		print CGI::Tr({}, CGI::th({}, [
 			$r->maketext("Problems"),
 			$r->maketext("Data"),
-			"Display&nbsp;Mode:&nbsp;" . 
+			$r->maketext("Display Mode:") . 
 			CGI::popup_menu(-name => "problem.displaymode", -values => \@active_modes, -default => $default_problem_mode) . '&nbsp;'. 
 			CGI::input({type => "submit", name => "refresh", value => $r->maketext("Refresh Display")}),
 		]));
@@ -2009,7 +2147,7 @@ sub body {
 			my ( $editProblemPage, $editProblemLink, $viewProblemPage,
 			     $viewProblemLink );
 			if ( $isGatewaySet ) {
-				$editProblemPage = $urlpath->new(type =>'instructor_problem_editor_withset_withproblem', args => { courseID => $courseID, setID => $fullSetID, problemID => $problemID });
+				$editProblemPage = $urlpath->new(type =>'instructor_problem_editor2_withset_withproblem', args => { courseID => $courseID, setID => $fullSetID, problemID => $problemID });
 				$editProblemLink = $self->systemLink($editProblemPage, params => { make_local_copy => 0 });
 				$viewProblemPage =
 					$urlpath->new(type =>'gateway_quiz',
@@ -2028,7 +2166,7 @@ sub body {
 							    problemSeed => $seed,
 							    sourceFilePath => $file });
 			} else {
-				$editProblemPage = $urlpath->new(type => 'instructor_problem_editor_withset_withproblem', args => { courseID => $courseID, setID => $fullSetID, problemID => $problemID });
+				$editProblemPage = $urlpath->new(type => 'instructor_problem_editor2_withset_withproblem', args => { courseID => $courseID, setID => $fullSetID, problemID => $problemID });
 				$editProblemLink = $self->systemLink($editProblemPage, params => { make_local_copy => 0 });
 			# FIXME: should we have an "act as" type link here when editing for multiple users?		
 				$viewProblemPage = $urlpath->new(type => 'problem_detail', args => { courseID => $courseID, setID => $setID, problemID => $problemID });
@@ -2066,8 +2204,7 @@ sub body {
 			#    homework set, or if we're editing a gateway set version, or 
 			#    if we're editing a gateway set and the problem is not a 
 			#    group problem		
-
-			# we also want "needs grading" or "regrade" links for problems which
+			# we also want "grade problem" links for problems which
 			# have essay questions.  
 	
 			my $showLinks = ( ! $isGatewaySet || 
@@ -2075,27 +2212,13 @@ sub body {
 			
 			my $gradingLink = "";
 			if ($showLinks) {
-			    my @setUsers = $db->listSetUsers($setID);
-			    my $gradeable = 0;
-			    my $needs_grading = 0;
-			    foreach my $userID (@setUsers)  {
-				my $userProblem = $db->getUserProblem($userID,$setID,$problemID);
-				if ($userProblem->flags =~ /needs_grading/) {
-				    $needs_grading = 1;
-				    $gradeable = 1;
-				    last;
-				} elsif ($userProblem->flags =~ /graded/) {
-				    $gradeable=1;
-				}
-				
-			    }
-			    if ($gradeable) {
-				
+			    
+			    if ($problemRecord->flags =~ /essay/) {
 				my $gradeProblemPage = $urlpath->new(type => 'instructor_problem_grader', args => { courseID => $courseID, setID => $fullSetID, problemID => $problemID });
-				$gradingLink = CGI::Tr({}, CGI::td({}, CGI::a({href => $self->systemLink($gradeProblemPage)}, $needs_grading ? "Needs Grading" : "Regrade")));
+				$gradingLink = CGI::Tr({}, CGI::td({}, CGI::a({href => $self->systemLink($gradeProblemPage)}, "Grade Problem")));
+			    }
+			    
 			}
-			
-		}
 		
 			
 			print CGI::Tr({}, CGI::td({}, [
@@ -2152,18 +2275,19 @@ sub body {
 	}
 	# always allow one to add a new problem, unless we're editing a set version
 	if ( ! $editingSetVersion ) {
-		print 	CGI::checkbox({ label=> "Add",
+		print 	CGI::checkbox({ label=> $r->maketext("Add"),
 					name=>"add_blank_problem", value=>"1"}
 			),CGI::input({
 					name=>"add_n_problems",
 					size=>2,
+					type=>'text',
 					value=>1 },
 					$r->maketext("blank problem template(s) to end of homework set")
 			);
 	}
 	print CGI::br(),CGI::br(),
-		CGI::input({type=>"submit", name=>"submit_changes", value=>"Save Changes"}),
-		CGI::input({type=>"submit", name=>"handle_numbers", value=>"Reorder problems only"}),
+		CGI::input({type=>"submit", name=>"submit_changes", value=>$r->maketext("Save Changes")}),
+		CGI::input({type=>"submit", name=>"handle_numbers", value=>$r->maketext("Reorder problems only")}),
 			$r->maketext("(Any unsaved changes will be lost.)");
 
 	#my $editNewProblemPage = $urlpath->new(type => 'instructor_problem_editor_withset_withproblem', args => { courseID => $courseID, setID => $setID, problemID =>'new_problem'    });
@@ -2176,6 +2300,10 @@ sub body {
 	return "";
 }
 
+#Tells template to output stylesheet and js for Jquery-UI
+sub output_jquery_ui{
+	return "";
+}
 
 sub output_JS {
 	my $self = shift;
@@ -2184,39 +2312,28 @@ sub output_JS {
 	my $setID   = $r->urlpath->arg("setID");
 	my $timezone = $self->{timezone_shortname};
 	my $site_url = $ce->{webworkURLs}->{htdocs};
-	
-	
-	# print javaScript for dateTimePicker	
-    print "\n\n<!-- add to header ProblemSetDetail-->\n\n";
-        
-	print qq!<link rel="stylesheet" type="text/css" href="$site_url/css/jquery-ui-1.8.18.custom.css"/>!,"\n";
+
+	    print "\n\n<!-- add to header ProblemSetDetail.pm -->";
 	print qq!<link rel="stylesheet" media="all" type="text/css" href="$site_url/css/vendor/jquery-ui-themes-1.10.3/themes/smoothness/jquery-ui.css">!,"\n";
 	print qq!<link rel="stylesheet" media="all" type="text/css" href="$site_url/css/jquery-ui-timepicker-addon.css">!,"\n";
 
 	print q!<style> 
 	.ui-datepicker{font-size:85%} 
-	.ui-datepicker{font-size:85%} 
-	.auto-changed{background-color: #ffffcc}
+	.auto-changed{background-color: #ffffcc} 
 	.changed {background-color: #ffffcc}
-    
     </style>!,"\n";
     
-    # jquery 1.7.1 loaded second to keep compatibility with timepicker.
-    # FIXME? replace timepicker with twitter bootstrap time picker?
-	# print javaScript for dateTimePicker	
-	print CGI::start_script({type=>"text/javascript", src=>"$site_url/js/addOnLoadEvent.js"}), CGI::end_script(),"\n";
-  	print CGI::start_script({type=>"text/javascript", src=>"$site_url/js/lib/vendor/jquery-1.8.1.min.js"}), CGI::end_script(),"\n";
-  	print CGI::start_script({type=>"text/javascript", src=>"$site_url/js/jquery-1.7.1.min.js"}), CGI::end_script(),"\n";
-	print CGI::start_script({type=>"text/javascript", src=>"$site_url/js/jquery-ui-1.8.18.custom.min.js"}), CGI::end_script(),"\n";
-	print CGI::start_script({type=>"text/javascript", src=>"$site_url/js/jquery-ui-timepicker-addon.js"}), CGI::end_script(),"\n";
+	print CGI::start_script({type=>"text/javascript", src=>"$site_url/js/legacy/vendor/jquery-ui-timepicker-addon.js"}), CGI::end_script();
+	print CGI::start_script({type=>"text/javascript", src=>"$site_url/js/legacy/addOnLoadEvent.js"}), CGI::end_script();
+	print CGI::start_script({type=>"text/javascript", src=>"$site_url/js/legacy/vendor/tabber.js"}), CGI::end_script();
+
     	
-	print CGI::start_script({-type=>"text/javascript"}),"\n";
-	print q!$(".ui-datepicker").draggable();!,"\n";
-	print WeBWorK::Utils::DatePickerScripts::date_scripts("set\\\\.$setID",$timezone),"\n";		
-	print CGI::end_script();
 	print "\n\n<!-- END add to header ProblemSetDetail-->\n\n";
 	return "";
 }
+
+
+
 1;
 
 =head1 AUTHOR

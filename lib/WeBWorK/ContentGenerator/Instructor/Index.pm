@@ -314,9 +314,9 @@ sub body {
 	
 	my (@viewable_sections,@viewable_recitations);
 	
-	if (defined @{$ce->{viewable_sections}->{$user}})
+	if (defined $ce->{viewable_sections}->{$user})
 		{@viewable_sections = @{$ce->{viewable_sections}->{$user}};}
-	if (defined @{$ce->{viewable_recitations}->{$user}})
+	if (defined $ce->{viewable_recitations}->{$user})
 		{@viewable_recitations = @{$ce->{viewable_recitations}->{$user}};}
 
 	if (@viewable_sections or @viewable_recitations){
@@ -361,7 +361,7 @@ sub body {
 		multiple => 1,
 	}, @GlobalSets);
 	
-	print CGI::start_form({method=>"get", action=>$r->uri()});
+	print CGI::start_form({method=>"get", id=>"instructor-tools-form", action=>$r->uri()});
 	print $self->hidden_authen_fields();
 	
 	print CGI::table({class=>"FormLayout"},
@@ -409,8 +409,7 @@ sub body {
 						CGI::td(CGI::submit(-name=>"assign_users", -label=>"Assign")." selected <b>users</b> to selected <b>sets</b>"),
 						CGI::td(CGI::submit(-name=>"act_as_user", -label=>"Act as")." one <b>user</b> (on one <b>set</b>)"),
 						CGI::td(CGI::submit(-name=>"edit_set_for_users", -label=>"Edit"). " one <b>set</b> for  <b>users</b>"),
-						CGI::td({-height=>4}),
-						CGI::td(CGI::submit(-name=>"email_users", -label=>"Email"). " your students"),
+ 						CGI::td(CGI::submit(-name=>"email_users", -label=>"Email"). " your students"),
 						($authz->hasPermissions($user, "manage_course_files")
 							? CGI::td(CGI::submit(-name=>"transfer_files", -label=>"Transfer"). " course files")
 							: ()
